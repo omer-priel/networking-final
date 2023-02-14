@@ -1,4 +1,4 @@
-# entry point to Application
+# entry point to DHCP
 
 from src.utils import config, init_config
 
@@ -6,8 +6,7 @@ from src.utils import config, init_config
 def main() -> None:
     init_config()
 
-    print("Hello World Application")
-    print(config.APP_HOST + ":" + str(config.APP_PORT))
+    print("Hello World DHCP")
 
 
 if __name__ == "__main__":

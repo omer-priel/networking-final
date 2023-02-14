@@ -11,7 +11,7 @@ clean:
 	find . -name '__pycache__' -exec rm -fr {} +
 
 clean-all: clean
-	rm -rf .venv
+	rm -rf .venv poetry.lock
 
 black:
 	 poetry run black ./src/
@@ -25,3 +25,9 @@ fix-lint: fix lint
 
 start-app:
 	PYTHONPATH=. poetry run python src/app/main.py
+
+start-dhcp:
+	PYTHONPATH=. poetry run python src/dhcp/main.py
+
+start-dns:
+	PYTHONPATH=. poetry run python src/dns/main.py
