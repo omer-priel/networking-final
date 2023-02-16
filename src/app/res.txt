@@ -1,0 +1,15 @@
+HTTP/1.1 200 OK
+Date: Thu, 16 Feb 2023 09:21:58 GMT
+Content-Type: text/html
+Content-Length: 5186
+Connection: keep-alive
+Last-Modified: Mon, 17 Mar 2014 17:25:03 GMT
+Expires: Thu, 31 Dec 2037 23:55:55 GMT
+Cache-Control: max-age=315360000
+<html>
+
+<head>
+<title>Example of a simple HTML page</title>
+</head>
+<body>BODY</body>
+</html>
