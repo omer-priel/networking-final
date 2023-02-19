@@ -9,6 +9,28 @@ Final project of networking
 
 TODO
 
+## For Developers
+
+Custom FTP Packets:
+
+### Upload File
+
+| Packet Data |
+|----------|:---------:|-----:|-----:|
+| 1 (Type) | File Path | Size | Data |
+
+### List Files
+
+| Packet Data |
+|----------|:--------------:|
+| 2 (Type) | Directory Path |
+
+### Download File
+
+| Packet Data |
+|----------|:---------:|
+| 3 (Type) | File name |
+
 ## Author
 
 Omer Priel

@@ -4,6 +4,7 @@ import logging
 import socket
 
 from src.utils import config, init_config, init_logging
+from src.utils.ftp import FTPRequest
 
 appSocket: socket.socket
 

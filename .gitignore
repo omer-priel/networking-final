@@ -2,3 +2,6 @@ __pycache__
 .venv
 
 poetry.lock
+
+# dist
+temp
