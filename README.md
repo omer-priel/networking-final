@@ -100,7 +100,7 @@ Sub Type: 2
 Type: Segment Layer
 Sub Type: 3
 
-#### List Files Request
+#### List Request
 
 | Directory Path |
 |---------------:|
@@ -109,7 +109,7 @@ Sub Type: 3
 Type: Auth Layer
 Sub Type: 4
 
-#### List Files Response
+#### List Response
 
 Head
 

@@ -4,7 +4,7 @@ import logging
 import socket
 
 from src.utils import config, init_config, init_logging
-from src.utils.ftp import FTPRequest
+from src.utils.ftp import BasicLayer, PocketType, PocketSubType
 
 appSocket: socket.socket
 
@@ -26,18 +26,19 @@ def create_socket() -> None:
     appSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     appSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    appSocket.bind((config.APP_HOST, config.APP_SRC_PORT))
+    appSocket.bind((config.APP_HOST, config.APP_PORT))
     appSocket.setblocking(1)
     appSocket.settimeout(config.SOCKET_TIMEOUT)
 
-    logging.info('The app socket initialized on ' + config.APP_HOST + ":" + str(config.APP_SRC_PORT))
+    logging.info('The app socket initialized on ' + config.APP_HOST + ":" + str(config.APP_PORT))
 
 
 def main_loop() -> None:
     while True:
         try:
-            data, clientAddress = appSocket.recvfrom(1024)
-            logging.debug("get message " + data.decode())
+            data, clientAddress = appSocket.recvfrom(BasicLayer.bytes_lenght())
+            pocket = BasicLayer.from_bytes(data)
+            logging.debug("get message: " + str(pocket))
         except socket.error:
             pass
 
