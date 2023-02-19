@@ -43,7 +43,7 @@ test-client-upload-file:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/A.md
 
 test-client-upload-file-child:
-	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/B.txt --to child-dir/B.txt
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/B.txt --dest child-dir/B.txt
 
 test-client-list-1:
 	PYTHONPATH=. poetry run python src/client/main.py list

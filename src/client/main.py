@@ -27,10 +27,7 @@ def create_socket() -> None:
     print('The client socket initialized on ' + config.CLIENT_HOST + ":" + str(config.CLIENT_PORT))
 
 
-def main() -> None:
-    init_app()
-    print("Start Client")
-
+def upload_file(filename: str, dest: str = "."):
     create_socket()
 
     appAddress = (config.APP_HOST, config.APP_PORT)
@@ -39,6 +36,20 @@ def main() -> None:
     print(pocket.to_bytes())
 
     clientSocket.sendto(pocket.to_bytes(), appAddress)
+
+    data = clientSocket.recvfrom(BasicLayer.bytes_lenght())[0]
+    pocket = BasicLayer.from_bytes(data)
+    logging.debug("get message: " + str(pocket))
+
+
+
+def main() -> None:
+    init_app()
+
+    print("Start Client")
+
+    upload_file("uploads/A.md")
+
 
 
 if __name__ == "__main__":

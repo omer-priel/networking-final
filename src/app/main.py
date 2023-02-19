@@ -39,6 +39,7 @@ def main_loop() -> None:
             data, clientAddress = appSocket.recvfrom(BasicLayer.bytes_lenght())
             pocket = BasicLayer.from_bytes(data)
             logging.debug("get message: " + str(pocket))
+            appSocket.sendto(pocket.to_bytes(), clientAddress)
         except socket.error:
             pass
 
