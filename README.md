@@ -49,9 +49,9 @@ Type: 2
 
 #### Segment Layer
 
-| Segment ID |
-|-----------:|
-| 8 Bytes    |
+| Segment ID |         Data         |
+|-----------:|:--------------------:|
+| 8 Bytes    | Segment Size * Bytes |
 
 Type: 3
 
@@ -87,16 +87,12 @@ Path: path of the file on the server
 
 | OK      | Error Message |
 |--------:|--------------:|
-| 1 Bytes | 255 Bytes     |
+| 1 Bytes | 256 Bytes     |
 
 Type: Auth Response Layer
 Sub Type: 2
 
 ### Upload Response Segment Layer
-
-|         Data         |
-|---------------------:|
-| Segment Size * Bytes |
 
 Type: Segment Layer
 Sub Type: 3

@@ -114,13 +114,15 @@ class SegmentLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> SegmentLayer:
         segmentID = struct.unpack_from(SegmentLayer.FORMAT, data, offset)
-        return SegmentLayer(segmentID)
+        data = data[SegmentLayer.length():]
+        return SegmentLayer(segmentID, data)
 
-    def __init__(self, segmentID: int) -> None:
+    def __init__(self, segmentID: int, data: bytes) -> None:
         self.segmentID = segmentID
+        self.data = data
 
     def to_bytes(self) -> bytes:
-       return struct.pack(SegmentLayer.FORMAT, self.segmentID)
+       return struct.pack(SegmentLayer.FORMAT, self.segmentID) + self.data
 
     def __str__(self) -> str:
         return " segment: {} |".format(self.segmentID)
@@ -176,6 +178,30 @@ class UploadRequestLayer:
         return " file path: {}, size: {} |".format(self.path, self.fileSize)
 
 
+class UploadResponseLayer:
+    FORMAT = '?256c'
+
+    @staticmethod
+    def length() -> int:
+        return struct.calcsize(UploadResponseLayer.FORMAT)
+
+    @staticmethod
+    def from_bytes(data: bytes, offset: int) -> UploadResponseLayer:
+        ok, errorMessage = struct.unpack_from(UploadResponseLayer.FORMAT, data, offset)
+
+        return UploadResponseLayer(ok, bytes.decode(errorMessage))
+
+    def __init__(self, ok: bool, errorMessage: str) -> None:
+        self.ok = ok
+        self.errorMessage = errorMessage
+
+    def to_bytes(self) -> bytes:
+       return struct.pack(self.length(), self.ok, self.errorMessage.encode())
+
+    def __str__(self) -> str:
+        return " ok: {}, message: {} |".format(self.ok, self.errorMessage)
+
+
 # A socket pocket
 # with parsing and saving all the layers of the app
 class Pocket:
@@ -187,6 +213,7 @@ class Pocket:
         akcLayer = None
 
         uploadRequestLayer = None
+        uploadResponseLayer = None
 
         offset = 0
         basicLayer = BasicLayer.from_bytes(data, offset)
@@ -197,29 +224,39 @@ class Pocket:
             offset += AuthLayer.length()
             if basicLayer.pocketSubType == PocketSubType.UploadRequest:
                 uploadRequestLayer = UploadRequestLayer.from_bytes(data, offset)
+
         elif basicLayer.pocketType == PocketType.AuthResponse:
             authResponseLayer = AuthResponseLayer.from_bytes(data, offset)
+            offset += AuthResponseLayer.length()
+            if basicLayer.pocketSubType == PocketSubType.UploadResponse:
+                uploadResponseLayer = UploadResponseLayer.from_bytes(data, offset)
+
         elif basicLayer.pocketType == PocketType.Segment:
             segmentLayer = SegmentLayer.from_bytes(data, offset)
         elif basicLayer.pocketType == PocketType.ACK:
             akcLayer = AKCLayer.from_bytes(data, offset)
 
-        return Pocket(basicLayer=basicLayer, authLayer=authLayer,
-                      authResponseLayer=authResponseLayer, segmentLayer=segmentLayer,
-                      akcLayer=akcLayer, uploadRequestLayer=uploadRequestLayer)
+        return Pocket(basicLayer=basicLayer,
+                      authLayer=authLayer, authResponseLayer=authResponseLayer,
+                      segmentLayer=segmentLayer, akcLayer=akcLayer,
+                      uploadRequestLayer=uploadRequestLayer,
+                      uploadResponseLayer=uploadResponseLayer)
 
 
     def __init__(self, basicLayer: BasicLayer, authLayer: AuthLayer | None = None,
                  authResponseLayer: AuthResponseLayer | None = None,
                  segmentLayer: SegmentLayer | None = None,
                  akcLayer: AKCLayer | None = None,
-                 uploadRequestLayer: UploadRequestLayer | None = None) -> None:
+                 uploadRequestLayer: UploadRequestLayer | None = None,
+                 uploadResponseLayer: UploadResponseLayer | None = None) -> None:
         self.basicLayer = basicLayer
         self.authLayer = authLayer
         self.authResponseLayer = authResponseLayer
         self.segmentLayer = segmentLayer
         self.akcLayer = akcLayer
+
         self.uploadRequestLayer = uploadRequestLayer
+        self.uploadResponseLayer = uploadResponseLayer
 
     def to_bytes(self) -> bytes:
         data = self.basicLayer.to_bytes()
@@ -229,10 +266,11 @@ class Pocket:
             if self.uploadRequestLayer:
                 data += self.uploadRequestLayer.to_bytes()
 
-        elif self.authResponseLayer:
-            data += self.authResponseLayer.to_bytes()
         elif self.segmentLayer:
             data += self.segmentLayer.to_bytes()
+            if self.uploadResponseLayer:
+                data += self.uploadResponseLayer.to_bytes()
+
         elif self.akcLayer:
             data += self.akcLayer.to_bytes()
 
@@ -247,11 +285,12 @@ class Pocket:
                 ret += str(self.uploadRequestLayer)
         elif self.authResponseLayer:
             ret += str(self.authResponseLayer)
+            if self.uploadResponseLayer:
+                ret += str(self.uploadResponseLayer)
         elif self.segmentLayer:
             ret += str(self.segmentLayer)
         elif self.akcLayer:
             ret += str(self.akcLayer)
-
 
         return ret
 
