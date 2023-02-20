@@ -1,6 +1,6 @@
 # entry point to DNS
 
-from src.utils import config, init_config
+from src.lib.config import config, init_config
 
 
 def main() -> None:

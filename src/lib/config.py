@@ -1,4 +1,4 @@
-# utils
+# config of the apps
 
 import os
 import logging

@@ -3,8 +3,8 @@
 import logging
 import socket
 
-from src.utils import config, init_config, init_logging
-from src.utils.ftp import Pocket, BasicLayer, AuthLayer, PocketType, PocketSubType
+from src.lib.config import config, init_config, init_logging
+from src.lib.ftp import Pocket, BasicLayer, AuthLayer, PocketType, PocketSubType
 
 appSocket: socket.socket
 

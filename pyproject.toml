@@ -26,6 +26,8 @@ exclude = '''
     | \.venv
     | docs
     | res
+    | uploads
+    | temp
   )/
 )
 '''

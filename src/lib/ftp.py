@@ -31,7 +31,7 @@ class PocketSubType(IntEnum):
     DownloadResponse = 7
     DownloadSegment = 8
 
-# Network Layer
+# RUDP Level
 class BasicLayer:
     FORMAT = 'ccL'
 
@@ -148,7 +148,7 @@ class AKCLayer:
         return " akc-to-segment: {} |".format(self.segmentID)
 
 
-# FTP (Application) Layer
+# FTP Level
 class UploadRequestLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> UploadRequestLayer:
@@ -176,7 +176,8 @@ class UploadRequestLayer:
         return " file path: {}, size: {} |".format(self.path, self.fileSize)
 
 
-# global
+# A socket pocket
+# with parsing and saving all the layers of the app
 class Pocket:
     @staticmethod
     def from_bytes(data: bytes) -> Pocket:
