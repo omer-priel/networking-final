@@ -4,7 +4,7 @@ import logging
 import socket
 
 from src.utils import config, init_config, init_logging
-from src.utils.ftp import BasicLayer, PocketType, PocketSubType
+from src.utils.ftp import Pocket, BasicLayer, AuthLayer, PocketType, PocketSubType
 
 appSocket: socket.socket
 
@@ -36,9 +36,12 @@ def create_socket() -> None:
 def main_loop() -> None:
     while True:
         try:
-            data, clientAddress = appSocket.recvfrom(BasicLayer.bytes_lenght())
-            pocket = BasicLayer.from_bytes(data)
+            data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
+
+            pocket = Pocket.from_bytes(data)
+
             logging.debug("get message: " + str(pocket))
+
             appSocket.sendto(pocket.to_bytes(), clientAddress)
         except socket.error:
             pass

@@ -4,7 +4,7 @@ import logging
 import socket
 
 from src.utils import config, init_config, init_logging
-from src.utils.ftp import BasicLayer, PocketType, PocketSubType
+from src.utils.ftp import Pocket, BasicLayer, AuthLayer, PocketType, PocketSubType
 
 clientSocket: socket.socket
 
@@ -32,16 +32,15 @@ def upload_file(filename: str, dest: str = "."):
 
     appAddress = (config.APP_HOST, config.APP_PORT)
 
-    pocket = BasicLayer(PocketType.Auth, PocketSubType.UploadFileRequest, 100)
+    pocket = Pocket(BasicLayer(10, PocketType.Auth), AuthLayer(100, 101, 102))
     print(pocket.to_bytes())
 
     clientSocket.sendto(pocket.to_bytes(), appAddress)
 
-    data = clientSocket.recvfrom(BasicLayer.bytes_lenght())[0]
-    pocket = BasicLayer.from_bytes(data)
+    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    pocket = Pocket.from_bytes(data)
+
     logging.debug("get message: " + str(pocket))
-
-
 
 def main() -> None:
     init_app()

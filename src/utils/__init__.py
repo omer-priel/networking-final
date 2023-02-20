@@ -12,6 +12,7 @@ class _config:
     CLIENT_PORT: int | None = None
 
     SOCKET_TIMEOUT: int = 3
+    SOCKET_MAXSIZE: int = 1024
     LOGGING_LEVEL: int = logging.DEBUG
 
 
