@@ -1,10 +1,11 @@
 # entry point to Application
 
+import os
 import logging
 import socket
 
 from src.lib.config import config, init_config, init_logging
-from src.lib.ftp import Pocket, BasicLayer, AuthLayer, PocketType, PocketSubType
+from src.lib.ftp import *
 
 clientSocket: socket.socket
 
@@ -26,28 +27,69 @@ def create_socket() -> None:
 
     print('The client socket initialized on ' + config.CLIENT_HOST + ":" + str(config.CLIENT_PORT))
 
+currentPocketID = 0
 
-def upload_file(filename: str, dest: str = "."):
+def get_current_pocketID() -> int:
+    return currentPocketID
+
+def create_current_pocketID() -> int:
+    global currentPocketID
+    currentPocketID += 1
+    return currentPocketID
+
+def upload_file(filename: str, destination: str) -> None:
     create_socket()
 
+    maxSingleSegmentSize = 4
+    maxWindowTimeout = 100 # [ms]
+
+    # load the file info
+    if not os.path.isfile(filename):
+        print("The file\"" + filename + "\" don't exists!")
+        return None
+
+    pocketFullSize = fileSize = os.stat(filename).st_size
+
+    # create request pocket
+
     appAddress = (config.APP_HOST, config.APP_PORT)
+    pocketID = create_current_pocketID()
 
-    pocket = Pocket(BasicLayer(10, PocketType.Auth), AuthLayer(100, 101, 102))
-    print(pocket.to_bytes())
+    reqPocket = Pocket(BasicLayer(pocketID, PocketType.Auth, PocketSubType.UploadRequest))
+    reqPocket.authLayer = AuthLayer(pocketFullSize, maxSingleSegmentSize, maxWindowTimeout)
+    reqPocket.uploadRequestLayer = UploadRequestLayer(destination, fileSize)
 
-    clientSocket.sendto(pocket.to_bytes(), appAddress)
+    # send request
+
+    logging.debug("send req pocket: " + str(reqPocket))
+
+    clientSocket.sendto(reqPocket.to_bytes(), appAddress)
+
+    # recive response
 
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-    pocket = Pocket.from_bytes(data)
+    resPocket = Pocket.from_bytes(data)
 
-    logging.debug("get message: " + str(pocket))
+    # handle response
+    logging.debug("get res pocket: " + str(resPocket))
+
+    if not resPocket.authResponseLayer or not reqPocket.uploadResponseLayer:
+        print("Error: faild to send the file")
+        return None
+
+    if not resPocket.uploadResponseLayer.ok:
+        print("Error: " + resPocket.uploadResponseLayer.errorMessage)
+        return None
+
+    # send the file
+
 
 def main() -> None:
     init_app()
 
     print("Start Client")
 
-    upload_file("uploads/A.md")
+    upload_file("uploads/A.md", "A.md")
 
 
 

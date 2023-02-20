@@ -9,7 +9,7 @@ import struct
 
 # Config
 BYTES_ORDER = 'little'
-FILE_PATH_MAX_SIZE = 256
+FILE_PATH_MAX_LENGTH = 256
 
 # Types
 class PocketType(IntEnum):
@@ -113,7 +113,7 @@ class SegmentLayer:
 
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> SegmentLayer:
-        segmentID = struct.unpack_from(SegmentLayer.FORMAT, data, offset)
+        segmentID = struct.unpack_from(SegmentLayer.FORMAT, data, offset)[0]
         data = data[SegmentLayer.length():]
         return SegmentLayer(segmentID, data)
 
@@ -137,7 +137,7 @@ class AKCLayer:
 
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> AKCLayer:
-        segmentID = struct.unpack_from(AKCLayer.FORMAT, data, offset)
+        segmentID = struct.unpack_from(AKCLayer.FORMAT, data, offset)[0]
         return AKCLayer(segmentID)
 
     def __init__(self, segmentID: int) -> None:
@@ -154,10 +154,11 @@ class AKCLayer:
 class UploadRequestLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> UploadRequestLayer:
-        filePathLength = struct.unpack_from("I", data, offset)
+        filePathLength = struct.unpack_from("I", data, offset)[0]
         offset += struct.calcsize("I")
-
-        filePath, fileSize = struct.unpack_from(str(filePathLength) + "cL", data, offset)
+        filePath = data[offset: offset + filePathLength]
+        offset += filePathLength
+        fileSize = struct.unpack_from("L", data, offset)[0]
 
         return UploadRequestLayer(bytes.decode(filePath), fileSize)
 
@@ -165,14 +166,11 @@ class UploadRequestLayer:
         self.path = filePath
         self.fileSize = fileSize
 
-    def get_format(self) -> str:
-        return "I{}cL".format(len(self.path))
-
     def length(self) -> int:
-        return struct.calcsize(self.get_format())
+        return struct.calcsize("I") + len(self.path) + struct.calcsize("L")
 
     def to_bytes(self) -> bytes:
-       return struct.pack(self.get_format(), len(self.path), self.path.encode(), self.fileSize)
+       return struct.pack("I", len(self.path)) + self.path.encode() + struct.pack("L", self.fileSize)
 
     def __str__(self) -> str:
         return " file path: {}, size: {} |".format(self.path, self.fileSize)
@@ -286,7 +284,7 @@ class Pocket:
         elif self.authResponseLayer:
             ret += str(self.authResponseLayer)
             if self.uploadResponseLayer:
-                ret += str(self.uploadResponseLayer)
+                ret += str(self.uploadRequestLayer)
         elif self.segmentLayer:
             ret += str(self.segmentLayer)
         elif self.akcLayer:

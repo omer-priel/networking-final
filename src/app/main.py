@@ -32,20 +32,48 @@ def create_socket() -> None:
 
     logging.info('The app socket initialized on ' + config.APP_HOST + ":" + str(config.APP_PORT))
 
-
 def main_loop() -> None:
     while True:
         try:
             data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
 
-            pocket = Pocket.from_bytes(data)
+            reqPocket = Pocket.from_bytes(data)
 
-            logging.debug("get message: " + str(pocket))
-
-            appSocket.sendto(pocket.to_bytes(), clientAddress)
+            if not reqPocket.authLayer:
+                logging.error("The first pocket has to be auth type!")
+            else:
+                handle_request(reqPocket)
         except socket.error:
             pass
 
+# controllers
+def handle_request(reqPocket: Pocket) -> None:
+    if reqPocket.basicLayer.pocketSubType == PocketSubType.UploadRequest:
+        handle_upload_request(reqPocket)
+    elif reqPocket.basicLayer.pocketSubType == PocketSubType.DownloadRequest:
+        # TODO handle download
+        pass
+    elif reqPocket.basicLayer.pocketSubType == PocketSubType.ListRequest:
+        # TODO handle list request
+        pass
+
+
+def handle_upload_request(reqPocket: Pocket) -> None:
+    # valid pocket
+    if not reqPocket.uploadRequestLayer:
+        pass
+
+    # check if the path is less the FILE_PATH_MAX_LENGTH
+
+    # split to segments info
+
+    # create and init window
+
+    # send auth respose pocket
+
+    # handle segments
+
+    # send close pocket
 
 
 if __name__ == "__main__":
