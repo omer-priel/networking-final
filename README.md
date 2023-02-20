@@ -102,7 +102,7 @@ Type: Segment Layer
 Sub Type: 3
 Data: segment of the file
 
-#### List Request Layer
+#### Download Request Layer
 
 | Path Length |         Path          |
 |------------:|----------------------:|
@@ -110,6 +110,36 @@ Data: segment of the file
 
 Type: Auth Layer
 Sub Type: 4
+Path: path of the file on the server
+
+* Can't download file that dos not exists
+
+#### Download Response Layer
+
+| File Size | Upload Date |
+|----------:|------------:|
+| 8 Bytes   | 8 Bytes     |
+
+Type: Auth Response Layer
+Sub Type: 5
+
+### Download Response Segment Layer
+
+|         Data         |
+|---------------------:|
+| Segment Size * Bytes |
+
+Type: Segment Layer
+Sub Type: 6
+
+#### List Request Layer
+
+| Path Length |         Path          |
+|------------:|----------------------:|
+| 4 Bytes     | (Path Length) * Bytes |
+
+Type: Auth Layer
+Sub Type: 7
 Path: path of the directory (folder) on the server
 
 #### List Response Layer
@@ -127,36 +157,6 @@ File Row
 | 4 Bytes        | (File Name Size) * Bytes | 8 Bytes   | 8 Bytes     |
 
 Type: Auth Response Layer
-Sub Type: 5
-
-#### Download Request Layer
-
-| Path Length |         Path          |
-|------------:|----------------------:|
-| 4 Bytes     | (Path Length) * Bytes |
-
-Type: Auth Layer
-Sub Type: 6
-Path: path of the file on the server
-
-* Can't download file that dos not exists
-
-#### Download Response Layer
-
-| File Size | Upload Date |
-|----------:|------------:|
-| 8 Bytes   | 8 Bytes     |
-
-Type: Auth Response Layer
-Sub Type: 7
-
-### Download Response Segment Layer
-
-|         Data         |
-|---------------------:|
-| Segment Size * Bytes |
-
-Type: Segment Layer
 Sub Type: 8
 
 ## Author
