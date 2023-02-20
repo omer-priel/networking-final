@@ -55,7 +55,7 @@ Type: 2
 
 Type: 3
 
-#### AKC Response Layer
+#### AKC Layer
 
 | Segment ID |
 |-----------:|
@@ -63,26 +63,27 @@ Type: 3
 
 Type: 4
 
-#### Close Response Layer
+#### Close Response
 
 Type: 5
 
 ### FTP Level
 
-#### Upload File Request
+#### Upload Request Layer
 
-| File Path | File Size |
-|:---------:|----------:|
-| 255 Bytes | 8 Bytes   |
+| Path Length |         Path          | File Size |
+|------------:|----------------------:|----------:|
+| 4 Bytes     | (Path Length) * Bytes | 8 Bytes   |
 
 Type: Auth Layer
 Sub Type: 1
+Path: path of the file on the server
 
 * If the file exists, delete it
 * Create the file
 * Can't upload more then 256 files in directory
 
-#### Upload File Response
+#### Upload Response Layer
 
 | OK      | Error Message |
 |--------:|--------------:|
@@ -91,66 +92,69 @@ Sub Type: 1
 Type: Auth Response Layer
 Sub Type: 2
 
-### Upload File Response Segment
+### Upload Response Segment Layer
 
-|       Data        |
-|------------------:|
-| File Size * Bytes |
+|         Data         |
+|---------------------:|
+| Segment Size * Bytes |
 
 Type: Segment Layer
 Sub Type: 3
+Data: segment of the file
 
-#### List Request
+#### List Request Layer
 
-| Directory Path |
-|---------------:|
-| 255 Bytes      |
+| Path Length |         Path          |
+|------------:|----------------------:|
+| 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
 Sub Type: 4
+Path: path of the directory (folder) on the server
 
-#### List Response
+#### List Response Layer
 
 Head
 
-| File Path |  Files Count |
-|----------:|-------------:|
-| 255 Bytes | 8 Bytes      |
+|  Files Count |
+|-------------:|
+| 8 Bytes      |
 
-File Part
+File Row
 
-| File Name | File Size | Upload Date |
-|----------:|----------:|------------:|
-| 255 Bytes | 8 Bytes   | 8 Bytes     |
+| File Name Size |        File Name         | File Size | Upload Date |
+|---------------:|-------------------------:|----------:|------------:|
+| 4 Bytes        | (File Name Size) * Bytes | 8 Bytes   | 8 Bytes     |
 
 Type: Auth Response Layer
 Sub Type: 5
 
-#### Download File Request
+#### Download Request Layer
 
-| File name |
-|----------:|
-| 255 Bytes |
+| Path Length |         Path          |
+|------------:|----------------------:|
+| 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
 Sub Type: 6
+Path: path of the file on the server
 
 * Can't download file that dos not exists
 
-#### Download File Response
+#### Download Response Layer
 
-| File Name | File Size | Upload Date |
-|----------:|----------:|------------:|
-| 255 Bytes | 8 Bytes   | 8 Bytes     |
+| File Size | Upload Date |
+|----------:|------------:|
+| 8 Bytes   | 8 Bytes     |
 
 Type: Auth Response Layer
 Sub Type: 7
 
-### Download File Response Segment
+### Download Response Segment Layer
 
-|       Data        |
-|------------------:|
-| File Size * Bytes |
+|         Data         |
+|---------------------:|
+| Segment Size * Bytes |
 
 Type: Segment Layer
 Sub Type: 8
