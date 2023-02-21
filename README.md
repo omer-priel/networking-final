@@ -112,9 +112,9 @@ Path: path of the file on the server
 
 #### Download Response Layer
 
-| OK      | Error Message Length |         Error Message          | File Size | Upload Date |
-|--------:|---------------------:|-------------------------------:|----------:|------------:|
-| 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes | 8 Bytes   | 8 Bytes     |
+| OK      | Error Message Length |         Error Message          | File Size | Upload At |
+|--------:|---------------------:|-------------------------------:|----------:|----------:|
+| 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes | 8 Bytes   | 8 Bytes   |
 Type: Auth Response Layer
 Sub Type: 5
 
@@ -144,9 +144,9 @@ Head
 
 File Row
 
-| File Name Size |        File Name         | File Size | Upload Date |
-|---------------:|-------------------------:|----------:|------------:|
-| 4 Bytes        | (File Name Size) * Bytes | 8 Bytes   | 8 Bytes     |
+| File Name Size |        File Name         | File Size | Upload At |
+|---------------:|-------------------------:|----------:|----------:|
+| 4 Bytes        | (File Name Size) * Bytes | 8 Bytes   | 8 Bytes   |
 
 Type: Auth Response Layer
 Sub Type: 8
