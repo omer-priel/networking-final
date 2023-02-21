@@ -28,15 +28,6 @@ def create_socket() -> None:
 
     print('The client socket initialized on ' + config.CLIENT_HOST + ":" + str(config.CLIENT_PORT))
 
-currentPocketID = 0
-
-def get_current_pocketID() -> int:
-    return currentPocketID
-
-def create_current_pocketID() -> int:
-    global currentPocketID
-    currentPocketID += 1
-    return currentPocketID
 
 def upload_file(filename: str, destination: str) -> None:
     create_socket()
@@ -56,9 +47,8 @@ def upload_file(filename: str, destination: str) -> None:
     # create request pocket
 
     appAddress = (config.APP_HOST, config.APP_PORT)
-    pocketID = create_current_pocketID()
 
-    reqPocket = Pocket(BasicLayer(pocketID, PocketType.Auth, PocketSubType.UploadRequest))
+    reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.UploadRequest))
     reqPocket.authLayer = AuthLayer(pocketFullSize, maxSingleSegmentSize, maxWindowTimeout)
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination, fileSize)
 
@@ -87,6 +77,8 @@ def upload_file(filename: str, destination: str) -> None:
         return None
 
     # send the file
+    pocketID = resPocket.basicLayer.pocketID
+
     singleSegmentSize = resPocket.authResponseLayer.singleSegmentSize
     segmentsAmount = resPocket.authResponseLayer.segmentsAmount
     windowTimeout = resPocket.authResponseLayer.windowTimeout
@@ -131,16 +123,16 @@ def upload_file(filename: str, destination: str) -> None:
 
                 if not timeout:
                     pocket = Pocket.from_bytes(data)
-                    if pocket.get_id() == get_current_pocketID():
-                        if pocket.basicLayer.pocketType == PocketType.Close:
-                            # complit the upload
-                            print("The file \"{}\" upload as \"{}\" to the app.".format(filename, destination))
-                            uploading = False
-                        elif pocket.akcLayer:
-                            if pocket.akcLayer.segmentID in windowToSend:
-                                windowToSend.remove(pocket.akcLayer.segmentID)
-                            if pocket.akcLayer.segmentID in windowSending:
-                                windowSending.remove(pocket.akcLayer.segmentID)
+                    if pocket.basicLayer.pocketType == PocketType.Close:
+                        # complit the upload
+                        print("The file \"{}\" upload as \"{}\" to the app.".format(filename, destination))
+                        timeout = True
+                        uploading = False
+                    elif pocket.akcLayer:
+                        if pocket.akcLayer.segmentID in windowToSend:
+                            windowToSend.remove(pocket.akcLayer.segmentID)
+                        if pocket.akcLayer.segmentID in windowSending:
+                            windowSending.remove(pocket.akcLayer.segmentID)
 
                         else:
                             print("Error: get pocket that not ACK and not Close")
@@ -159,7 +151,7 @@ def upload_file(filename: str, destination: str) -> None:
 def main() -> None:
     init_app()
 
-    upload_file("uploads/A.md", "A.md")
+    upload_file("uploads/B.md", "B.md")
 
 
 

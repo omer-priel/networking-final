@@ -4,6 +4,7 @@ import os
 import os.path
 import logging
 import socket
+from typing import Any
 
 from src.lib.config import config, init_config, init_logging
 
@@ -60,11 +61,41 @@ def main_loop() -> None:
             reqPocket = Pocket.from_bytes(data)
 
             if not reqPocket.authLayer:
-                pass
+                send_close(reqPocket.get_id(), clientAddress)
             else:
                 handle_request(reqPocket, clientAddress)
         except socket.error:
             pass
+
+
+# working with clients
+currentPocketID = 0
+
+def get_current_pocketID() -> int:
+    return currentPocketID
+
+def create_current_pocketID() -> int:
+    global currentPocketID
+    currentPocketID += 1
+    return currentPocketID
+
+
+def send_close(pocketID: int, clientAddress: Any) -> None:
+    closePocket = Pocket(BasicLayer(pocketID, PocketType.Close))
+    appSocket.sendto(closePocket.to_bytes(), clientAddress)
+
+
+def recv_pocket() -> Pocket:
+    try:
+        while True:
+            data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
+            pocket = Pocket.from_bytes(data)
+            if pocket.get_id() == get_current_pocketID():
+                return pocket
+            send_close(pocket.get_id(), clientAddress)
+    except socket.error as ex:
+        raise ex
+
 
 # controllers
 def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
@@ -79,8 +110,6 @@ def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
 
 
 def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
-    pocketID = reqPocket.get_id()
-
     # valid pocket
     errorMessage: str | None = None
     if not reqPocket.uploadRequestLayer:
@@ -92,7 +121,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
 
     if errorMessage:
         logging.error(errorMessage)
-        resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.UploadResponse))
+        resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.UploadResponse))
         resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
         reqPocket.uploadResponseLayer = UploadResponseLayer(False, errorMessage)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
@@ -130,7 +159,8 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     segments = [b""] * segmentsAmount
 
     # send auth respose pocket
-    resPocket = Pocket(BasicLayer(reqPocket.get_id(), PocketType.AuthResponse, PocketSubType.UploadResponse))
+    pocketID = create_current_pocketID()
+    resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.UploadResponse))
     resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
     resPocket.uploadResponseLayer = UploadResponseLayer(True, "")
     appSocket.sendto(resPocket.to_bytes(), clientAddress)
@@ -138,8 +168,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     # recv segments
     while len(neededSegments) > 0:
         try:
-            data = appSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-            segmetPocket = Pocket.from_bytes(data)
+            segmetPocket = recv_pocket()
 
             if not segmetPocket.get_id() == pocketID:
                 logging.error("Get pocket with warng pocket ID")
@@ -160,8 +189,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
             pass
 
     # send close pocket
-    closePocket = Pocket(BasicLayer(pocketID, PocketType.Close))
-    appSocket.sendto(closePocket.to_bytes(), clientAddress)
+    send_close(pocketID, clientAddress)
 
     # save the file
     for segment in segments:
