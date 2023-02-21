@@ -73,7 +73,7 @@ def upload_file(filename: str, destination: str) -> None:
     # handle response
     logging.debug("get res pocket: " + str(resPocket))
 
-    if not resPocket.authResponseLayer or not reqPocket.uploadResponseLayer:
+    if not resPocket.authResponseLayer or not resPocket.uploadResponseLayer:
         print("Error: faild to send the file")
         return None
 
@@ -82,7 +82,7 @@ def upload_file(filename: str, destination: str) -> None:
         return None
 
     # send the file
-
+    # TODO
 
 def main() -> None:
     init_app()

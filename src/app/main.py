@@ -1,11 +1,21 @@
 # entry point to Application
 
+import os
+import os.path
 import logging
 import socket
 
 from src.lib.config import config, init_config, init_logging
-from src.lib.ftp import Pocket, BasicLayer, AuthLayer, PocketType, PocketSubType
 
+from src.lib.ftp import *
+
+# config
+
+SINGLE_SEGMENT_SIZE_LIMIT = (4, 20) # [bytes]
+WINDOW_TIMEOUT_LIMIT = (1, 10) # [s]
+
+
+# globals
 appSocket: socket.socket
 
 def main() -> None:
@@ -42,14 +52,14 @@ def main_loop() -> None:
             if not reqPocket.authLayer:
                 logging.error("The first pocket has to be auth type!")
             else:
-                handle_request(reqPocket)
+                handle_request(reqPocket, clientAddress)
         except socket.error:
             pass
 
 # controllers
-def handle_request(reqPocket: Pocket) -> None:
+def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
     if reqPocket.basicLayer.pocketSubType == PocketSubType.UploadRequest:
-        handle_upload_request(reqPocket)
+        handle_upload_request(reqPocket, clientAddress)
     elif reqPocket.basicLayer.pocketSubType == PocketSubType.DownloadRequest:
         # TODO handle download
         pass
@@ -58,22 +68,73 @@ def handle_request(reqPocket: Pocket) -> None:
         pass
 
 
-def handle_upload_request(reqPocket: Pocket) -> None:
+def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
     # valid pocket
+    errorMessage: str | None = None
     if not reqPocket.uploadRequestLayer:
-        pass
+        errorMessage = "This is not upload request"
+    elif len(reqPocket.uploadRequestLayer.path) > config.FILE_PATH_MAX_LENGTH:
+        errorMessage = "The file path cannot be more then " + config.FILE_PATH_MAX_LENGTH + " chars"
+    elif reqPocket.uploadRequestLayer.fileSize <= 0:
+        errorMessage = "The file cannot be empty"
 
-    # check if the path is less the FILE_PATH_MAX_LENGTH
+    if errorMessage:
+        logging.error(errorMessage)
+        resPocket = Pocket(BasicLayer(reqPocket.get_id(), PocketType.AuthResponse, PocketSubType.UploadResponse))
+        resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
+        reqPocket.uploadResponseLayer = UploadResponseLayer(False, errorMessage)
+        appSocket.sendto(resPocket.to_bytes(), clientAddress)
+        return None
+
+    # create the file
+    filePath = reqPocket.uploadRequestLayer.path
+    directoyPath = os.path.dirname(filePath)
+
+    # delete the file if already exists
+    if os.path.isfile(filePath):
+        os.remove(filePath)
+
+    if not directoyPath:
+        directoyPath = "."
+
+    if not os.path.isdir(directoyPath):
+        os.mkdir(directoyPath)
+
+    fileStream = open(filePath, "w")
 
     # split to segments info
+    singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
+    singleSegmentSize = min(SINGLE_SEGMENT_SIZE_LIMIT[1], singleSegmentSize)
 
-    # create and init window
+    segmentsAmount = int(reqPocket.uploadRequestLayer.fileSize / singleSegmentSize)
+    if segmentsAmount * singleSegmentSize < reqPocket.uploadRequestLayer.fileSize:
+        segmentsAmount += 1
+
+    windowTimeout = max(WINDOW_TIMEOUT_LIMIT[0], reqPocket.authLayer.maxWindowTimeout)
+    windowTimeout = min(WINDOW_TIMEOUT_LIMIT[1], windowTimeout)
+
+    # init the window
+    window = [False] * segmentsAmount
+    fileBody = [b""] * segmentsAmount
 
     # send auth respose pocket
+    resPocket = Pocket(BasicLayer(reqPocket.get_id(), PocketType.AuthResponse, PocketSubType.UploadResponse))
+    resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
+    resPocket.uploadResponseLayer = UploadResponseLayer(True, "")
+    appSocket.sendto(resPocket.to_bytes(), clientAddress)
+
+    # TODO
 
     # handle segments
 
     # send close pocket
+
+    # save the file
+    for segment in fileBody:
+        fileStream.write(segment.decode())
+
+    # clean up
+    fileStream.close()
 
 
 if __name__ == "__main__":

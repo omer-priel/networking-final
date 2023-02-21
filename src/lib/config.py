@@ -8,8 +8,11 @@ from dotenv import load_dotenv
 class _config:
     APP_HOST: str | None = None
     APP_PORT: int | None = None
+    APP_STORAGE_PATH: str | None = None
     CLIENT_HOST: str | None = None
     CLIENT_PORT: int | None = None
+
+    FILE_PATH_MAX_LENGTH = 256
 
     SOCKET_TIMEOUT: int = 3
     SOCKET_MAXSIZE: int = 1024
@@ -24,6 +27,7 @@ def init_config() -> None:
 
     config.APP_HOST = os.getenv("APP_HOST")
     config.APP_PORT = int(os.getenv("APP_PORT"))
+    config.APP_STORAGE_PATH = os.getenv("APP_STORAGE_PATH")
     config.CLIENT_HOST = os.getenv("CLIENT_HOST")
     config.CLIENT_PORT = int(os.getenv("CLIENT_PORT"))
 

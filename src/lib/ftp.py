@@ -9,7 +9,6 @@ import struct
 
 # Config
 BYTES_ORDER = 'little'
-FILE_PATH_MAX_LENGTH = 256
 
 # Types
 class PocketType(IntEnum):
@@ -177,24 +176,29 @@ class UploadRequestLayer:
 
 
 class UploadResponseLayer:
-    FORMAT = '?256c'
-
-    @staticmethod
-    def length() -> int:
-        return struct.calcsize(UploadResponseLayer.FORMAT)
-
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> UploadResponseLayer:
-        ok, errorMessage = struct.unpack_from(UploadResponseLayer.FORMAT, data, offset)
+        ok, errorMessageLength = struct.unpack_from("?b", data, offset)
+        offset = struct.calcsize("?b")
+        if errorMessageLength == 0:
+            errorMessage = ""
+        else:
+            errorMessage = bytes.decode(data[offset:offset + errorMessageLength - 1])
 
-        return UploadResponseLayer(ok, bytes.decode(errorMessage))
+        return UploadResponseLayer(ok, errorMessage)
 
     def __init__(self, ok: bool, errorMessage: str) -> None:
         self.ok = ok
         self.errorMessage = errorMessage
 
+    def length(self) -> int:
+        return struct.calcsize("?b") + len(self.errorMessage)
+
     def to_bytes(self) -> bytes:
-       return struct.pack(self.length(), self.ok, self.errorMessage.encode())
+       if len(self.errorMessage) == 0:
+            return struct.pack("?b", self.ok, 0)
+
+       return struct.pack("?b", self.ok, len(self.errorMessage)) + self.errorMessage.encode()
 
     def __str__(self) -> str:
         return " ok: {}, message: {} |".format(self.ok, self.errorMessage)
@@ -256,6 +260,9 @@ class Pocket:
         self.uploadRequestLayer = uploadRequestLayer
         self.uploadResponseLayer = uploadResponseLayer
 
+    def get_id(self):
+        return self.basicLayer.pocketID
+
     def to_bytes(self) -> bytes:
         data = self.basicLayer.to_bytes()
 
@@ -263,11 +270,12 @@ class Pocket:
             data += self.authLayer.to_bytes()
             if self.uploadRequestLayer:
                 data += self.uploadRequestLayer.to_bytes()
-
-        elif self.segmentLayer:
-            data += self.segmentLayer.to_bytes()
+        elif self.authResponseLayer:
+            data += self.authResponseLayer.to_bytes()
             if self.uploadResponseLayer:
                 data += self.uploadResponseLayer.to_bytes()
+        elif self.segmentLayer:
+            data += self.segmentLayer.to_bytes()
 
         elif self.akcLayer:
             data += self.akcLayer.to_bytes()
@@ -284,7 +292,7 @@ class Pocket:
         elif self.authResponseLayer:
             ret += str(self.authResponseLayer)
             if self.uploadResponseLayer:
-                ret += str(self.uploadRequestLayer)
+                ret += str(self.uploadResponseLayer)
         elif self.segmentLayer:
             ret += str(self.segmentLayer)
         elif self.akcLayer:
