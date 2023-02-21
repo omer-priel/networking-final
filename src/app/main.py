@@ -232,16 +232,19 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
 
     # send the download respose
     pocketID = create_current_pocketID()
-    resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.DownloadResponse))
-    resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
-    resPocket.downloadResponseLayer = DownloadResponseLayer(True, "", fileSize, updatedAt)
-    appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
-    # recive the ready ACK from the client
-    readyPocket = recv_pocket()
-    print(readyPocket)
+    ready = False
+    while not ready:
+        resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.DownloadResponse))
+        resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
+        resPocket.downloadResponseLayer = DownloadResponseLayer(True, "", fileSize, updatedAt)
+        appSocket.sendto(resPocket.to_bytes(), clientAddress)
+
+        # recive the ready ACK from the client
+        readyPocket = recv_pocket()
 
     # downloading the segments
+
 
 if __name__ == "__main__":
     main()
