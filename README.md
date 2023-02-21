@@ -63,13 +63,9 @@ Type: 3
 
 Type: 4
 
-#### Close
+#### Close (FIN)
 
 Type: 5
-
-#### Close AKC
-
-Type: 6
 
 ### FTP Level
 

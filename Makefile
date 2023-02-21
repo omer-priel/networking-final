@@ -32,6 +32,19 @@ fix-lint: fix lint
 scripts-create-big-file:
 	PYTHONPATH=. poetry run python src/scripts/create_big_file.py
 
+# testing
+scripts-tc-disable:
+	sudo tc qdisc del dev lo root netem
+
+scripts-tc-10:
+	sudo tc qdisc add dev lo root netem loss 10%
+
+scripts-tc-15:
+	sudo tc qdisc add dev lo root netem loss 15%
+
+scripts-tc-20:
+	sudo tc qdisc add dev lo root netem loss 20%
+
 # start applications
 start-app:
 	PYTHONPATH=. poetry run python src/app/main.py

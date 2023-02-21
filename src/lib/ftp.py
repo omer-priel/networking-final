@@ -18,7 +18,6 @@ class PocketType(IntEnum):
     Segment = 3
     ACK = 4
     Close = 5
-    CloseACK = 5
 
 class PocketSubType(IntEnum):
     Unknown = 0
