@@ -49,9 +49,9 @@ Type: 2
 
 #### Segment Layer
 
-| Segment ID |         Data         |
-|-----------:|:--------------------:|
-| 8 Bytes    | Segment Size * Bytes |
+| Segment ID |   Segment Length    |         Data         |
+|-----------:|--------------------:|---------------------:|
+| 8 Bytes    | 8 Bytes             | Segment Size * Bytes |
 
 Type: 3
 
@@ -85,9 +85,9 @@ Path: path of the file on the server
 
 #### Upload Response Layer
 
-| OK      | Error Message |
-|--------:|--------------:|
-| 1 Bytes | 256 Bytes     |
+| OK      | Error Message Length |         Error Message          |
+|--------:|---------------------:|-------------------------------:|
+| 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes |
 
 Type: Auth Response Layer
 Sub Type: 2
@@ -112,21 +112,17 @@ Path: path of the file on the server
 
 #### Download Response Layer
 
-| File Size | Upload Date |
-|----------:|------------:|
-| 8 Bytes   | 8 Bytes     |
-
+| OK      | Error Message Length |         Error Message          | File Size | Upload Date |
+|--------:|---------------------:|-------------------------------:|----------:|------------:|
+| 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes | 8 Bytes   | 8 Bytes     |
 Type: Auth Response Layer
 Sub Type: 5
 
 ### Download Response Segment Layer
 
-|         Data         |
-|---------------------:|
-| Segment Size * Bytes |
-
 Type: Segment Layer
 Sub Type: 6
+Data: segment of the file
 
 #### List Request Layer
 
