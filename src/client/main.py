@@ -148,6 +148,42 @@ def upload_file(filename: str, destination: str) -> None:
     fileStream.close()
 
 
+def download_file(filePath: str, destination: str):
+    # check if the directory of destination exists
+
+    # remove if need the destination
+
+    # create and remove again destination for checking
+
+    # send download request
+
+    # recive download response
+
+    # handel response
+
+    # init containers for downloading
+
+    # send ack for start downloading
+
+    # handel segments
+
+    # send complite ACK knowning the app that the file complited
+
+    # wait for closeing and sending ACK's in the same time
+
+    # close the connection
+
+    # create the file
+
+    # clean up
+    pass
+
+
+def send_list_command(directoryPath: str):
+    # TODO list command
+    pass
+
+
 def print_help():
     # TODO print help command
     pass
@@ -167,7 +203,7 @@ def main() -> None:
         while i < len(sys.argv):
             if sys.argv[i] == "--dest":
                 if i == len(sys.argv) - 1:
-                    print("The option --dest need path as paramter")
+                    print("The option --dest need destaion as paramter")
                     return None
                 destination = sys.argv[i + 1]
                 i += 1
@@ -184,9 +220,26 @@ def main() -> None:
 
         upload_file(filename, destination)
     elif sys.argv[1] == "download":
-        pass
+        if len(sys.argv) == 2:
+            print("File path and destination path are Missing!")
+            return None
+        if len(sys.argv) == 3:
+            print("Destination path are Missing!")
+            return None
+
+        filePath = sys.argv[2]
+        destination = sys.argv[3]
+
+        download_file(filePath, destination)
+
     elif sys.argv[1] == "list":
-        pass
+        if len(sys.argv) == 2:
+            directoryPath = "."
+        else:
+            directoryPath = sys.argv[2]
+
+        send_list_command(directoryPath)
+
     else:
         print("The command \"{}\" not exists".format(sys.argv[1]))
 
