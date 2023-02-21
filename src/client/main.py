@@ -1,6 +1,7 @@
 # entry point to Application
 
 import os
+import time
 import logging
 import socket
 
@@ -48,6 +49,8 @@ def upload_file(filename: str, destination: str) -> None:
         print("The file\"" + filename + "\" don't exists!")
         return None
 
+    fileStream = open(filename, "r")
+
     pocketFullSize = fileSize = os.stat(filename).st_size
 
     # create request pocket
@@ -75,14 +78,76 @@ def upload_file(filename: str, destination: str) -> None:
 
     if not resPocket.authResponseLayer or not resPocket.uploadResponseLayer:
         print("Error: faild to send the file")
+        fileStream.close()
         return None
 
     if not resPocket.uploadResponseLayer.ok:
         print("Error: " + resPocket.uploadResponseLayer.errorMessage)
+        fileStream.close()
         return None
 
     # send the file
-    # TODO
+    singleSegmentSize = resPocket.authResponseLayer.singleSegmentSize
+    segmentsAmount = resPocket.authResponseLayer.segmentsAmount
+    windowTimeout = resPocket.authResponseLayer.windowTimeout
+
+    windowToSend = list(range(segmentsAmount))
+    windowSending = []
+
+    last = time.time()
+
+    while len(windowToSend) > 0 or len(windowSending) > 0:
+        now = time.time()
+        if last + windowTimeout > now:
+            # send a segment
+            if len(windowToSend) > 0:
+                segmentID = windowToSend.pop(0)
+                fileStream.seek(segmentID * singleSegmentSize)
+                if segmentID * singleSegmentSize <= fileSize - singleSegmentSize:
+                    # is not the last segment
+                    segment = fileStream.read(singleSegmentSize)
+                else:
+                    # is the last segment
+                    segment = fileStream.read(fileSize - singleSegmentSize)
+
+                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment, PocketSubType.UploadSegment))
+                segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
+
+                windowToSend.remove(segmentID)
+                windowSending.append(segmentID)
+
+                clientSocket.send(segmentPocket.to_bytes())
+        else:
+            # refresh window
+            timeout = False
+            while not timeout:
+                try:
+                    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+                except TimeoutError:
+                    timeout = True
+
+                if not timeout:
+                    pocket = Pocket.from_bytes(data)
+                    if pocket.get_id() == get_current_pocketID():
+                        if pocket.basicLayer.pocketType == PocketType.CloseResponse:
+                            # complit the upload
+                            print("The file \"{}\" upload as \"{}\" to the app.".format(filename, destination))
+                            timeout = False
+                            windowToSend = windowSending = []
+                        elif pocket.akcLayer:
+                            if pocket.akcLayer.segmentID in windowSending:
+                                windowSending.remove(pocket.akcLayer.segmentID)
+                        else:
+                            print("Error: get pocket that not ACK and not Close")
+                    else:
+                        print("Error: get pocket that has warng pocket ID")
+
+
+
+        last = now
+
+    fileStream.close()
+
 
 def main() -> None:
     init_app()

@@ -27,8 +27,17 @@ def main() -> None:
 def init_app() -> None:
     init_config()
     init_logging()
+    init_strorage()
 
     logging.info('The app is initialized')
+
+
+def init_strorage():
+    if not os.path.isdir(config.APP_STORAGE_PATH):
+        os.mkdir(config.APP_STORAGE_PATH)
+
+def get_path(filePath: str) -> str:
+    return config.APP_STORAGE_PATH + "/" + filePath
 
 def create_socket() -> None:
     global appSocket
@@ -41,6 +50,7 @@ def create_socket() -> None:
     appSocket.settimeout(config.SOCKET_TIMEOUT)
 
     logging.info('The app socket initialized on ' + config.APP_HOST + ":" + str(config.APP_PORT))
+
 
 def main_loop() -> None:
     while True:

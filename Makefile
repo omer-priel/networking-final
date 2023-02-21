@@ -13,7 +13,7 @@ clean:
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
-	rm -rf temp
+	rm -rf temp storage
 
 clean-all: clean
 	rm -rf .venv poetry.lock

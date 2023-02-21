@@ -104,7 +104,7 @@ class AuthResponseLayer:
 
 
 class SegmentLayer:
-    FORMAT = 'L'
+    FORMAT = 'LI'
 
     @staticmethod
     def length() -> int:
@@ -112,8 +112,8 @@ class SegmentLayer:
 
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> SegmentLayer:
-        segmentID = struct.unpack_from(SegmentLayer.FORMAT, data, offset)[0]
-        data = data[SegmentLayer.length():]
+        segmentID, segmentLength = struct.unpack_from(SegmentLayer.FORMAT, data, offset)
+        data = data[SegmentLayer.length():SegmentLayer.length() + segmentLength]
         return SegmentLayer(segmentID, data)
 
     def __init__(self, segmentID: int, data: bytes) -> None:
@@ -121,10 +121,10 @@ class SegmentLayer:
         self.data = data
 
     def to_bytes(self) -> bytes:
-       return struct.pack(SegmentLayer.FORMAT, self.segmentID) + self.data
+       return struct.pack(SegmentLayer.FORMAT, self.segmentID, len(self.data)) + self.data
 
     def __str__(self) -> str:
-        return " segment: {} |".format(self.segmentID)
+        return " segment: {}, length: {} |".format(self.segmentID, len(self.data))
 
 
 class AKCLayer:
