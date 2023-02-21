@@ -27,9 +27,11 @@ class PocketSubType(IntEnum):
     UploadSegment = 3
     DownloadRequest = 4
     DownloadResponse = 5
-    DownloadSegment = 6
-    ListRequest = 7
-    ListResponse = 8
+    DownloadReadyForDownloading = 6
+    DownloadSegment = 7
+    DownloadComplited = 8
+    ListRequest = 9
+    ListResponse = 10
 
 # RUDP Level
 class BasicLayer:

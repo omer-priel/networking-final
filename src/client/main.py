@@ -2,6 +2,7 @@
 
 import sys
 import os
+import os.path
 import time
 import logging
 import socket
@@ -17,6 +18,7 @@ MAX_WINDOW_TIMEOUT = 1 # [s]
 def init_app() -> None:
     init_config()
     init_logging()
+    create_socket()
 
     logging.info('The app is initialized')
 
@@ -34,8 +36,6 @@ def create_socket() -> None:
 
 
 def upload_file(filename: str, destination: str) -> None:
-    create_socket()
-
     # load the file info
     if not os.path.isfile(filename):
         print("The file\"" + filename + "\" don't exists!")
@@ -54,7 +54,6 @@ def upload_file(filename: str, destination: str) -> None:
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination, fileSize)
 
     # send request
-
     logging.debug("send req pocket: " + str(reqPocket))
 
     clientSocket.sendto(reqPocket.to_bytes(), appAddress)
@@ -150,22 +149,68 @@ def upload_file(filename: str, destination: str) -> None:
 
 def download_file(filePath: str, destination: str):
     # check if the directory of destination exists
+    if os.path.isfile(destination):
+        os.remove(destination)
+    elif not os.path.isdir(os.path.dirname(destination)):
+        os.mkdir(os.path.dirname(destination))
 
     # remove if need the destination
-
     # create and remove again destination for checking
+    fStream = open(destination, "a")
+    if not fStream.writable():
+        print("The file \"{}\" is not writable!".format(destination))
+        fStream.close()
+        os.remove(destination)
+        return None
+
+    fStream.close()
+    os.remove(destination)
 
     # send download request
+    appAddress = (config.APP_HOST, config.APP_PORT)
+
+    reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.DownloadRequest))
+    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
+    reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
+
+    logging.debug("send req pocket: " + str(reqPocket))
+
+    clientSocket.sendto(reqPocket.to_bytes(), appAddress)
 
     # recive download response
+    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    resPocket = Pocket.from_bytes(data)
 
     # handel response
+    logging.debug("get res pocket: " + str(resPocket))
+
+    if not resPocket.authResponseLayer or not resPocket.downloadResponseLayer:
+        print("Error: faild to download the file")
+        return None
+
+    if not resPocket.downloadResponseLayer.ok:
+        print("Error: " + resPocket.downloadResponseLayer.errorMessage)
+        return None
 
     # init containers for downloading
+    pocketID = resPocket.basicLayer.pocketID
+
+    singleSegmentSize = resPocket.authResponseLayer.singleSegmentSize
+    segmentsAmount = resPocket.authResponseLayer.segmentsAmount
+    windowTimeout = resPocket.authResponseLayer.windowTimeout
+
+    neededSegments = list(range(segmentsAmount))
+    segments = [b""] * segmentsAmount
 
     # send ack for start downloading
+    readyPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.DownloadReadyForDownloading))
+    readyPocket.akcLayer = AKCLayer(0)
 
-    # handel segments
+    logging.debug("send ready ack pocket: " + str(readyPocket))
+
+    clientSocket.sendto(readyPocket.to_bytes(), appAddress)
+
+    # handle segments
 
     # send complite ACK knowning the app that the file complited
 

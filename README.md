@@ -92,7 +92,7 @@ Path: path of the file on the server
 Type: Auth Response Layer
 Sub Type: 2
 
-### Upload Response Segment Layer
+### Upload Response Segment
 
 Type: Segment Layer
 Sub Type: 3
@@ -118,11 +118,21 @@ Path: path of the file on the server
 Type: Auth Response Layer
 Sub Type: 5
 
-### Download Response Segment Layer
+### Download Ready For Downloading
+
+Type: AKC Layer
+Sub Type: 6
+
+### Download Response Segment
 
 Type: Segment Layer
-Sub Type: 6
+Sub Type: 7
 Data: segment of the file
+
+### Download Complited
+
+Type: AKC Layer
+Sub Type: 8
 
 #### List Request Layer
 
@@ -131,7 +141,7 @@ Data: segment of the file
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
-Sub Type: 7
+Sub Type: 9
 Path: path of the directory (folder) on the server
 
 #### List Response Layer
@@ -149,7 +159,7 @@ File Row
 | 4 Bytes        | (File Name Size) * Bytes | 8 Bytes   | 8 Bytes    |
 
 Type: Auth Response Layer
-Sub Type: 8
+Sub Type: 10
 
 ## Author
 

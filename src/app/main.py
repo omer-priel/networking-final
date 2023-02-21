@@ -102,8 +102,7 @@ def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
     if reqPocket.basicLayer.pocketSubType == PocketSubType.UploadRequest:
         handle_upload_request(reqPocket, clientAddress)
     elif reqPocket.basicLayer.pocketSubType == PocketSubType.DownloadRequest:
-        # TODO handle download
-        pass
+        handle_download_request(reqPocket, clientAddress)
     elif reqPocket.basicLayer.pocketSubType == PocketSubType.ListRequest:
         # TODO handle list request
         pass
@@ -123,7 +122,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
         logging.error(errorMessage)
         resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.UploadResponse))
         resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
-        reqPocket.uploadResponseLayer = UploadResponseLayer(False, errorMessage)
+        resPocket.uploadResponseLayer = UploadResponseLayer(False, errorMessage)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
         return None
 
@@ -197,6 +196,52 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
 
     logging.info("The file \"{}\" uploaded".format(reqPocket.uploadRequestLayer.path))
 
+
+def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
+    # valid pocket
+    errorMessage: str | None = None
+    if not reqPocket.downloadRequestLayer:
+        errorMessage = "This is not download request"
+
+    filePath = get_path(reqPocket.downloadRequestLayer.path)
+    if not os.path.isfile(filePath):
+        errorMessage = "The file {} dos not exists!".format(reqPocket.downloadRequestLayer.path)
+
+    if errorMessage:
+        logging.error(errorMessage)
+        resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.DownloadResponse))
+        resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
+        resPocket.downloadResponseLayer = DownloadResponseLayer(False, errorMessage, 0, 0.0)
+        appSocket.sendto(resPocket.to_bytes(), clientAddress)
+        return None
+
+    # ready the file for downloading
+    pocketFullSize = fileSize = os.stat(filePath).st_size
+    updatedAt = os.path.getmtime(filePath)
+    fStream = open(filePath, "r")
+
+    singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
+    singleSegmentSize = min(SINGLE_SEGMENT_SIZE_LIMIT[1], singleSegmentSize)
+
+    segmentsAmount = int(fileSize / singleSegmentSize)
+    if segmentsAmount * singleSegmentSize < fileSize:
+        segmentsAmount += 1
+
+    windowTimeout = max(WINDOW_TIMEOUT_LIMIT[0], reqPocket.authLayer.maxWindowTimeout)
+    windowTimeout = min(WINDOW_TIMEOUT_LIMIT[1], windowTimeout)
+
+    # send the download respose
+    pocketID = create_current_pocketID()
+    resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.DownloadResponse))
+    resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
+    resPocket.downloadResponseLayer = DownloadResponseLayer(True, "", fileSize, updatedAt)
+    appSocket.sendto(resPocket.to_bytes(), clientAddress)
+
+    # recive the ready ACK from the client
+    readyPocket = recv_pocket()
+    print(readyPocket)
+
+    # downloading the segments
 
 if __name__ == "__main__":
     main()
