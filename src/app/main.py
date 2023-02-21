@@ -12,7 +12,7 @@ from src.lib.ftp import *
 
 # config
 
-SINGLE_SEGMENT_SIZE_LIMIT = (1, 1) # [bytes]
+SINGLE_SEGMENT_SIZE_LIMIT = (10, 100) # [byte]
 WINDOW_TIMEOUT_LIMIT = (0.1, 0.1) # [s]
 
 
@@ -170,9 +170,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
         try:
             segmetPocket = recv_pocket()
 
-            if not segmetPocket.get_id() == pocketID:
-                logging.error("Get pocket with warng pocket ID")
-            elif (not segmetPocket.segmentLayer) or (not segmetPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment):
+            if (not segmetPocket.segmentLayer) or (not segmetPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment):
                 logging.error("Get pocket that is not upload segment")
             else:
                 segmentID = segmetPocket.segmentLayer.segmentID
@@ -184,7 +182,6 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
                 akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
                 appSocket.sendto(akcPocket.to_bytes(), clientAddress)
-                logging.debug("send segment AKC {}".format(segmentID))
         except socket.error:
             pass
 

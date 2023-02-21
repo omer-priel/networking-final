@@ -10,6 +10,9 @@ from src.lib.ftp import *
 
 clientSocket: socket.socket
 
+MAX_SEGMENT_SIZE = 100 # [byte]
+MAX_WINDOW_TIMEOUT = 0.1 # [s]
+
 def init_app() -> None:
     init_config()
     init_logging()
@@ -32,9 +35,6 @@ def create_socket() -> None:
 def upload_file(filename: str, destination: str) -> None:
     create_socket()
 
-    maxSingleSegmentSize = 4
-    maxWindowTimeout = 100 # [ms]
-
     # load the file info
     if not os.path.isfile(filename):
         print("The file\"" + filename + "\" don't exists!")
@@ -49,7 +49,7 @@ def upload_file(filename: str, destination: str) -> None:
     appAddress = (config.APP_HOST, config.APP_PORT)
 
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.UploadRequest))
-    reqPocket.authLayer = AuthLayer(pocketFullSize, maxSingleSegmentSize, maxWindowTimeout)
+    reqPocket.authLayer = AuthLayer(pocketFullSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination, fileSize)
 
     # send request
@@ -110,7 +110,6 @@ def upload_file(filename: str, destination: str) -> None:
                 windowSending.append(segmentID)
 
                 clientSocket.sendto(segmentPocket.to_bytes(), appAddress)
-                logging.debug("send segment {}".format(segmentID))
         else:
             # refresh window
             logging.debug("refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount))
@@ -151,7 +150,7 @@ def upload_file(filename: str, destination: str) -> None:
 def main() -> None:
     init_app()
 
-    upload_file("uploads/B.md", "B.md")
+    upload_file("uploads/10K.txt", "A.txt")
 
 
 
