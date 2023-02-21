@@ -71,11 +71,11 @@ test-client-upload-all:
 	make test-client-upload-file
 	make test-client-upload-file-child
 	make test-client-upload-file-100
-	make test-client-upload-file-100-child
+	make test-client-upload-file-child-100
 	make test-client-upload-file-1000
-	make test-client-upload-file-1000-child
+	make test-client-upload-file-child-1000
 	make test-client-upload-file-10000
-	make test-client-upload-file-10000-child
+	make test-client-upload-file-child-10000
 
 test-client-list-1:
 	PYTHONPATH=. poetry run python src/client/main.py list

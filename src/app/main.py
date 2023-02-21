@@ -12,8 +12,8 @@ from src.lib.ftp import *
 
 # config
 
-SINGLE_SEGMENT_SIZE_LIMIT = (10, 100) # [byte]
-WINDOW_TIMEOUT_LIMIT = (0.1, 0.1) # [s]
+SINGLE_SEGMENT_SIZE_LIMIT = (10, 1500) # [byte]
+WINDOW_TIMEOUT_LIMIT = (0.1, 1) # [s]
 
 
 # globals

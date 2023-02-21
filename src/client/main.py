@@ -1,5 +1,6 @@
 # entry point to Application
 
+import sys
 import os
 import time
 import logging
@@ -10,8 +11,8 @@ from src.lib.ftp import *
 
 clientSocket: socket.socket
 
-MAX_SEGMENT_SIZE = 100 # [byte]
-MAX_WINDOW_TIMEOUT = 0.1 # [s]
+MAX_SEGMENT_SIZE = 1000 # [byte]
+MAX_WINDOW_TIMEOUT = 1 # [s]
 
 def init_app() -> None:
     init_config()
@@ -147,10 +148,47 @@ def upload_file(filename: str, destination: str) -> None:
     fileStream.close()
 
 
+def print_help():
+    # TODO print help command
+    pass
+
 def main() -> None:
     init_app()
 
-    upload_file("uploads/10K.txt", "A.txt")
+    if len(sys.argv) < 2:
+        print_help()
+        return None
+
+    if sys.argv[1] == "upload":
+        filename = None
+        destination = None
+
+        i = 2
+        while i < len(sys.argv):
+            if sys.argv[i] == "--dest":
+                if i == len(sys.argv) - 1:
+                    print("The option --dest need path as paramter")
+                    return None
+                destination = sys.argv[i + 1]
+                i += 1
+            else:
+                filename = sys.argv[i]
+            i += 1
+
+        if not filename:
+            print("Missing file path to upload")
+            return None
+
+        if not destination:
+            destination = os.path.basename(filename)
+
+        upload_file(filename, destination)
+    elif sys.argv[1] == "download":
+        pass
+    elif sys.argv[1] == "list":
+        pass
+    else:
+        print("The command \"{}\" not exists".format(sys.argv[1]))
 
 
 
