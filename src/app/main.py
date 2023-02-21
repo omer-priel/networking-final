@@ -160,7 +160,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
             pass
 
     # send close pocket
-    closePocket = Pocket(BasicLayer(pocketID, PocketType.CloseResponse))
+    closePocket = Pocket(BasicLayer(pocketID, PocketType.Close))
     appSocket.sendto(closePocket.to_bytes(), clientAddress)
 
     # save the file

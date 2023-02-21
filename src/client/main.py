@@ -96,7 +96,9 @@ def upload_file(filename: str, destination: str) -> None:
 
     last = time.time()
 
-    while len(windowToSend) > 0 or len(windowSending) > 0:
+    uploading = True
+
+    while uploading:
         now = time.time()
         if last + windowTimeout > now:
             # send a segment
@@ -119,7 +121,7 @@ def upload_file(filename: str, destination: str) -> None:
                 logging.debug("send segment {}".format(segmentID))
         else:
             # refresh window
-            logging.debug("refresh window")
+            logging.debug("refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount))
             timeout = False
             while not timeout:
                 try:
@@ -130,22 +132,22 @@ def upload_file(filename: str, destination: str) -> None:
                 if not timeout:
                     pocket = Pocket.from_bytes(data)
                     if pocket.get_id() == get_current_pocketID():
-                        if pocket.basicLayer.pocketType == PocketType.CloseResponse:
+                        if pocket.basicLayer.pocketType == PocketType.Close:
                             # complit the upload
                             print("The file \"{}\" upload as \"{}\" to the app.".format(filename, destination))
-                            timeout = False
-                            windowToSend = windowSending = []
+                            uploading = False
                         elif pocket.akcLayer:
                             if pocket.akcLayer.segmentID in windowToSend:
                                 windowToSend.remove(pocket.akcLayer.segmentID)
                             if pocket.akcLayer.segmentID in windowSending:
                                 windowSending.remove(pocket.akcLayer.segmentID)
+
                         else:
                             print("Error: get pocket that not ACK and not Close")
                     else:
                         print("Error: get pocket that has warng pocket ID")
 
-            windowToSend = windowToSend + windowSending
+            windowToSend = windowSending + windowToSend
             windowSending = []
 
             last = time.time()

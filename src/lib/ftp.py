@@ -17,7 +17,8 @@ class PocketType(IntEnum):
     AuthResponse = 2
     Segment = 3
     ACK = 4
-    CloseResponse = 5
+    Close = 5
+    CloseACK = 5
 
 class PocketSubType(IntEnum):
     Unknown = 0
