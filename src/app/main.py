@@ -79,6 +79,8 @@ def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
 
 
 def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
+    pocketID = reqPocket.get_id()
+
     # valid pocket
     errorMessage: str | None = None
     if not reqPocket.uploadRequestLayer:
@@ -90,14 +92,14 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
 
     if errorMessage:
         logging.error(errorMessage)
-        resPocket = Pocket(BasicLayer(reqPocket.get_id(), PocketType.AuthResponse, PocketSubType.UploadResponse))
+        resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.UploadResponse))
         resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
         reqPocket.uploadResponseLayer = UploadResponseLayer(False, errorMessage)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
         return None
 
     # create the file
-    filePath = reqPocket.uploadRequestLayer.path
+    filePath = get_path(reqPocket.uploadRequestLayer.path)
     directoyPath = os.path.dirname(filePath)
 
     # delete the file if already exists
@@ -124,8 +126,8 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     windowTimeout = min(WINDOW_TIMEOUT_LIMIT[1], windowTimeout)
 
     # init the window
-    window = [False] * segmentsAmount
-    fileBody = [b""] * segmentsAmount
+    neededSegments = list(range(segmentsAmount))
+    segments = [b""] * segmentsAmount
 
     # send auth respose pocket
     resPocket = Pocket(BasicLayer(reqPocket.get_id(), PocketType.AuthResponse, PocketSubType.UploadResponse))
@@ -133,14 +135,36 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     resPocket.uploadResponseLayer = UploadResponseLayer(True, "")
     appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
-    # TODO
+    # recv segments
+    while len(neededSegments) > 0:
+        try:
+            data = appSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+            segmetPocket = Pocket.from_bytes(data)
 
-    # handle segments
+            if not segmetPocket.get_id() == pocketID:
+                logging.error("Get pocket with warng pocket ID")
+            elif (not segmetPocket.segmentLayer) or (not segmetPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment):
+                logging.error("Get pocket that is not upload segment")
+            else:
+                segmentID = segmetPocket.segmentLayer.segmentID
+                if segmentID in neededSegments:
+                    # add new segment
+                    neededSegments.remove(segmentID)
+                    segments[segmentID] = segmetPocket.segmentLayer.data
+
+                akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
+                akcPocket.akcLayer = AKCLayer(segmentID)
+                appSocket.sendto(akcPocket.to_bytes(), clientAddress)
+                logging.debug("send segment AKC {}".format(segmentID))
+        except socket.error:
+            pass
 
     # send close pocket
+    closePocket = Pocket(BasicLayer(pocketID, PocketType.CloseResponse))
+    appSocket.sendto(closePocket.to_bytes(), clientAddress)
 
     # save the file
-    for segment in fileBody:
+    for segment in segments:
         fileStream.write(segment.decode())
 
     # clean up

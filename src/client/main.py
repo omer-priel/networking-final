@@ -111,14 +111,16 @@ def upload_file(filename: str, destination: str) -> None:
                     segment = fileStream.read(fileSize - singleSegmentSize)
 
                 segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment, PocketSubType.UploadSegment))
-                segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
+                segmentPocket.segmentLayer = SegmentLayer(segmentID, segment.encode())
 
-                windowToSend.remove(segmentID)
                 windowSending.append(segmentID)
 
-                clientSocket.send(segmentPocket.to_bytes())
+                clientSocket.sendto(segmentPocket.to_bytes(), appAddress)
+                logging.debug("send segment {}".format(segmentID))
         else:
             # refresh window
+            last = now
+            logging.debug("refresh window")
             timeout = False
             while not timeout:
                 try:
@@ -143,16 +145,11 @@ def upload_file(filename: str, destination: str) -> None:
                         print("Error: get pocket that has warng pocket ID")
 
 
-
-        last = now
-
     fileStream.close()
 
 
 def main() -> None:
     init_app()
-
-    print("Start Client")
 
     upload_file("uploads/A.md", "A.md")
 

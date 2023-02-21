@@ -113,8 +113,8 @@ class SegmentLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> SegmentLayer:
         segmentID, segmentLength = struct.unpack_from(SegmentLayer.FORMAT, data, offset)
-        data = data[SegmentLayer.length():SegmentLayer.length() + segmentLength]
-        return SegmentLayer(segmentID, data)
+        segment = data[offset + SegmentLayer.length():offset + SegmentLayer.length() + segmentLength]
+        return SegmentLayer(segmentID, segment)
 
     def __init__(self, segmentID: int, data: bytes) -> None:
         self.segmentID = segmentID
@@ -276,7 +276,6 @@ class Pocket:
                 data += self.uploadResponseLayer.to_bytes()
         elif self.segmentLayer:
             data += self.segmentLayer.to_bytes()
-
         elif self.akcLayer:
             data += self.akcLayer.to_bytes()
 
