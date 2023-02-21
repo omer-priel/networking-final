@@ -65,15 +65,15 @@ class AuthLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> AuthLayer:
         pocketFullSize, maxSingleSegmentSize, maxWindowTimeout = struct.unpack_from(AuthLayer.FORMAT, data, offset)
-        return AuthLayer(pocketFullSize, maxSingleSegmentSize, maxWindowTimeout)
+        return AuthLayer(pocketFullSize, maxSingleSegmentSize, float(maxWindowTimeout / 1000))
 
-    def __init__(self, pocketFullSize: int, maxSingleSegmentSize: int, maxWindowTimeout: int) -> None:
+    def __init__(self, pocketFullSize: int, maxSingleSegmentSize: int, maxWindowTimeout: float) -> None:
         self.pocketFullSize = pocketFullSize
         self.maxSingleSegmentSize = maxSingleSegmentSize
         self.maxWindowTimeout = maxWindowTimeout
 
     def to_bytes(self) -> bytes:
-       return struct.pack(AuthLayer.FORMAT, self.pocketFullSize, self.maxSingleSegmentSize, self.maxWindowTimeout)
+       return struct.pack(AuthLayer.FORMAT, self.pocketFullSize, self.maxSingleSegmentSize, int(self.maxWindowTimeout * 1000))
 
     def __str__(self) -> str:
         return " size: {} |".format(self.pocketFullSize)
@@ -89,15 +89,15 @@ class AuthResponseLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> AuthResponseLayer:
         segmentsAmount, singleSegmentSize, windowTimeout = struct.unpack_from(AuthResponseLayer.FORMAT, data, offset)
-        return AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
+        return AuthResponseLayer(segmentsAmount, singleSegmentSize, float(windowTimeout / 1000))
 
-    def __init__(self, segmentsAmount: int, singleSegmentSize: int, windowTimeout: int) -> None:
+    def __init__(self, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float) -> None:
         self.segmentsAmount = segmentsAmount
         self.singleSegmentSize = singleSegmentSize
         self.windowTimeout = windowTimeout
 
     def to_bytes(self) -> bytes:
-       return struct.pack(AuthResponseLayer.FORMAT, self.segmentsAmount, self.singleSegmentSize, self.windowTimeout)
+       return struct.pack(AuthResponseLayer.FORMAT, self.segmentsAmount, self.singleSegmentSize, int(self.windowTimeout * 1000))
 
     def __str__(self) -> str:
         return " segments: {}, size: {}, window-timeout: {} |".format(self.segmentsAmount, self.singleSegmentSize, self.windowTimeout)

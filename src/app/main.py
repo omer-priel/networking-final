@@ -11,8 +11,8 @@ from src.lib.ftp import *
 
 # config
 
-SINGLE_SEGMENT_SIZE_LIMIT = (4, 20) # [bytes]
-WINDOW_TIMEOUT_LIMIT = (1, 10) # [s]
+SINGLE_SEGMENT_SIZE_LIMIT = (1, 1) # [bytes]
+WINDOW_TIMEOUT_LIMIT = (0.1, 0.1) # [s]
 
 
 # globals
@@ -60,7 +60,7 @@ def main_loop() -> None:
             reqPocket = Pocket.from_bytes(data)
 
             if not reqPocket.authLayer:
-                logging.error("The first pocket has to be auth type!")
+                pass
             else:
                 handle_request(reqPocket, clientAddress)
         except socket.error:
@@ -169,6 +169,8 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
 
     # clean up
     fileStream.close()
+
+    logging.info("The file \"{}\" uploaded".format(reqPocket.uploadRequestLayer.path))
 
 
 if __name__ == "__main__":

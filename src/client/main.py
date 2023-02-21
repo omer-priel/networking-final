@@ -119,7 +119,6 @@ def upload_file(filename: str, destination: str) -> None:
                 logging.debug("send segment {}".format(segmentID))
         else:
             # refresh window
-            last = now
             logging.debug("refresh window")
             timeout = False
             while not timeout:
@@ -137,12 +136,19 @@ def upload_file(filename: str, destination: str) -> None:
                             timeout = False
                             windowToSend = windowSending = []
                         elif pocket.akcLayer:
+                            if pocket.akcLayer.segmentID in windowToSend:
+                                windowToSend.remove(pocket.akcLayer.segmentID)
                             if pocket.akcLayer.segmentID in windowSending:
                                 windowSending.remove(pocket.akcLayer.segmentID)
                         else:
                             print("Error: get pocket that not ACK and not Close")
                     else:
                         print("Error: get pocket that has warng pocket ID")
+
+            windowToSend = windowToSend + windowSending
+            windowSending = []
+
+            last = time.time()
 
 
     fileStream.close()
