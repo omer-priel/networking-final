@@ -159,5 +159,8 @@ test-client-list-a:
 test-client-list-b:
 	PYTHONPATH=. poetry run python src/client/main.py list b
 
-test-client-list-c:
+test-client-list-a-c:
 	PYTHONPATH=. poetry run python src/client/main.py list a/c
+
+test-client-list-range:
+	PYTHONPATH=. poetry run python src/client/main.py list range

@@ -296,7 +296,7 @@ class ListResponseLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> ListResponseLayer:
         ok, errorMessageLength = struct.unpack_from("?b", data, offset)
-        offset = struct.calcsize("?b")
+        offset += struct.calcsize("?b")
         if errorMessageLength == 0:
             errorMessage = ""
         else:
@@ -333,14 +333,14 @@ def pack_directory_block(directoryName: str, updatedAt: float) -> bytes:
 
 
 def unpack_directory_block(data: bytes, offset: int) -> tuple[tuple[str, float], int]:
-    directoryNameLength = struct.unpack("I", offset)
+    directoryNameLength = struct.unpack_from("I", data, offset)[0]
     offset += struct.calcsize("I")
     if directoryNameLength == 0:
         directoryName = ""
     else:
-        directoryName = bytes.decode(data[offset:offset + directoryNameLength - 1])
+        directoryName = bytes.decode(data[offset:offset + directoryNameLength])
     offset += directoryNameLength
-    updatedAt = struct.unpack("d", offset)[0]
+    updatedAt = struct.unpack_from("d", data, offset)[0]
     offset += struct.calcsize("d")
 
     return ((directoryName, updatedAt), offset)
@@ -351,14 +351,14 @@ def pack_file_block(fileName: str, updatedAt: float, fileSize: int) -> bytes:
 
 
 def unpack_file_block(data: bytes, offset: int) -> tuple[tuple[str, float, int], int]:
-    fileNameLength = struct.unpack("I", offset)
+    fileNameLength = struct.unpack_from("I", data, offset)[0]
     offset += struct.calcsize("I")
     if fileNameLength == 0:
         fileName = ""
     else:
-        fileName = bytes.decode(data[offset:offset + fileNameLength - 1])
+        fileName = bytes.decode(data[offset:offset + fileNameLength])
     offset += fileNameLength
-    updatedAt, fileSize = struct.unpack("dL", offset)
+    updatedAt, fileSize = struct.unpack_from("dL", data, offset)
     offset += struct.calcsize("dL")
 
     return ((fileName, updatedAt, fileSize), offset)
