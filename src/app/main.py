@@ -141,9 +141,8 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
 
     if not directoyPath:
         directoyPath = "."
-
-    if not os.path.isdir(directoyPath):
-        os.mkdir(directoyPath)
+    elif not os.path.isdir(directoyPath):
+        os.makedirs(directoyPath, exist_ok=True)
 
     fileStream = open(filePath, "w")
 
