@@ -209,7 +209,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
 
     filePath = get_path(reqPocket.downloadRequestLayer.path)
     if not os.path.isfile(filePath):
-        errorMessage = "The file {} dos not exists!".format(reqPocket.downloadRequestLayer.path)
+        errorMessage = "The file \"{}\" dos not exists!".format(reqPocket.downloadRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
@@ -315,20 +315,34 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
 def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
     # valid pocket
     errorMessage: str | None = None
-    if not reqPocket.downloadRequestLayer:
-        errorMessage = "This is not download request"
+    if not reqPocket.listRequestLayer:
+        errorMessage = "This is not list request"
 
-    filePath = get_path(reqPocket.downloadRequestLayer.path)
-    if not os.path.isfile(filePath):
-        errorMessage = "The file {} dos not exists!".format(reqPocket.downloadRequestLayer.path)
+    directoryPath = get_path(reqPocket.listRequestLayer.path)
+    if not os.path.isdir(directoryPath):
+        errorMessage = "The directory \"{}\" dos not exists!".format(reqPocket.listRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
-        resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.DownloadResponse))
+        resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.ListResponse))
         resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
-        resPocket.downloadResponseLayer = DownloadResponseLayer(False, errorMessage, 0, 0.0)
+        resPocket.listResponseLayer = ListResponseLayer(False, errorMessage, 0, 0)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
         return None
+
+    directoriesAndFiles = os.listdir(directoryPath)
+    directories = [directory for directory in directoriesAndFiles if os.path.isdir(directoryPath + "/" + directory)]
+    files = [file for file in directoriesAndFiles if os.path.isfile (directoryPath + "/" + file)]
+
+    # check if exist directories or files
+    if len(directories) == 0 and len(files) == 0:
+        resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.ListResponse))
+        resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
+        resPocket.listResponseLayer = ListResponseLayer(True, "", 0, 0)
+        appSocket.sendto(resPocket.to_bytes(), clientAddress)
+        return None
+
+    ## ! TODO all the continue
 
     # ready the file for downloading
     fileSize = os.stat(filePath).st_size
