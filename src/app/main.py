@@ -221,7 +221,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
         return None
 
     # ready the file for downloading
-    pocketFullSize = fileSize = os.stat(filePath).st_size
+    fileSize = os.stat(filePath).st_size
     updatedAt = os.path.getmtime(filePath)
     fileStream = open(filePath, "r")
 

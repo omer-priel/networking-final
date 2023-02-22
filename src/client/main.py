@@ -43,14 +43,14 @@ def upload_file(filename: str, destination: str) -> None:
 
     fileStream = open(filename, "r")
 
-    pocketFullSize = fileSize = os.stat(filename).st_size
+    fileSize = os.stat(filename).st_size
 
     # create request pocket
 
     appAddress = (config.APP_HOST, config.APP_PORT)
 
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.UploadRequest))
-    reqPocket.authLayer = AuthLayer(pocketFullSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
+    reqPocket.authLayer = AuthLayer(fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination, fileSize)
 
     # send request
