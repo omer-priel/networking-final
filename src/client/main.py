@@ -58,7 +58,6 @@ def upload_file(options: Options, filename: str, destination: str) -> None:
     fileSize = os.stat(filename).st_size
 
     # create request pocket
-
     appAddress = (config.APP_HOST, config.APP_PORT)
 
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.UploadRequest))
@@ -71,7 +70,6 @@ def upload_file(options: Options, filename: str, destination: str) -> None:
     clientSocket.sendto(reqPocket.to_bytes(), appAddress)
 
     # recive response
-
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
     resPocket = Pocket.from_bytes(data)
 
@@ -453,6 +451,7 @@ def main() -> None:
                 return None
             else:
                 options.userName = sys.argv[i + 1]
+                options.anonymous = False
             i += 2
         elif sys.argv[i] == "--password":
             if i + 1 == len(sys.argv):
@@ -465,7 +464,7 @@ def main() -> None:
             print("The option {} dose not exists!".format(sys.argv[i]))
             return None
 
-    if options.password != "" and options.userName != "":
+    if options.password != "" and options.userName == "":
         print("The --password need User Name!")
         return None
 

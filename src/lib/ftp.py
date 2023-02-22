@@ -82,13 +82,13 @@ class AuthLayer(LayerInterface):
     def from_bytes(data: bytes, offset: int) -> AuthLayer:
         pocketFullSize, maxSingleSegmentSize, maxWindowTimeout, anonymous, userNameLength = struct.unpack_from("LLL?I", data, offset)
         offset += struct.calcsize("LLL?I")
-        if anonymous:
-            userName = ""
-            password = ""
-        else:
+        userName = ""
+        password = ""
+        if not anonymous:
             if userNameLength > 0:
                 userName = data[offset : offset + userNameLength].decode()
                 offset += userNameLength
+
             passwordLength =  struct.unpack_from("I", data, offset)[0]
             offset += struct.calcsize("I")
             if passwordLength > 0:
@@ -109,7 +109,7 @@ class AuthLayer(LayerInterface):
         return struct.calcsize("LLL?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
 
     def to_bytes(self) -> bytes:
-        ret = struct.pack("LLL?I", self.pocketFullSize, self.maxSingleSegmentSize, int(self.maxWindowTimeout * 1000), len(self.userName), self.anonymous)
+        ret = struct.pack("LLL?I", self.pocketFullSize, self.maxSingleSegmentSize, int(self.maxWindowTimeout * 1000), self.anonymous, len(self.userName))
         ret += self.userName.encode()
         ret += struct.pack("I", len(self.password))
         ret += self.password.encode()
@@ -124,14 +124,13 @@ class AuthLayer(LayerInterface):
 class AuthResponseLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> AuthResponseLayer:
-        ok, errorMessageLength = struct.unpack_from("?I", data, offset)
+        ok, errorMessageLength = struct.unpack_from("?b", data, offset)
         offset += struct.calcsize("?b")
         if errorMessageLength == 0:
             errorMessage = ""
         else:
             errorMessage = data[offset : offset + errorMessageLength].decode()
             offset += errorMessageLength
-
         segmentsAmount, singleSegmentSize, windowTimeout = struct.unpack_from("LLL", data, offset)
         return AuthResponseLayer(ok, errorMessage, segmentsAmount, singleSegmentSize, float(windowTimeout / 1000))
 
@@ -143,10 +142,10 @@ class AuthResponseLayer(LayerInterface):
         self.windowTimeout = windowTimeout
 
     def length(self) -> int:
-        return struct.calcsize("?I") + len(self.errorMessage) + struct.calcsize("LLL")
+        return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LLL")
 
     def to_bytes(self) -> bytes:
-        ret = struct.pack("?I", self.ok, len(self.errorMessage))
+        ret = struct.pack("?b", self.ok, len(self.errorMessage))
         ret += self.errorMessage.encode()
         ret += struct.pack("LLL", self.segmentsAmount, self.singleSegmentSize, int(self.windowTimeout * 1000))
         return ret
@@ -161,7 +160,8 @@ class SegmentLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> SegmentLayer:
         segmentID, segmentLength = struct.unpack_from("LI", data, offset)
-        segment = data[offset + SegmentLayer.length() : offset + SegmentLayer.length() + segmentLength]
+        offset += struct.calcsize("LI")
+        segment = data[offset : offset + segmentLength]
         return SegmentLayer(segmentID, segment)
 
     def __init__(self, segmentID: int, data: bytes) -> None:
@@ -330,13 +330,13 @@ class Pocket:
     def from_bytes(data: bytes) -> Pocket:
         offset = 0
         basicLayer = BasicLayer.from_bytes(data, offset)
-        offset += BasicLayer.length()
+        offset += basicLayer.length()
 
         pocket = Pocket(basicLayer)
 
         if basicLayer.pocketType == PocketType.Auth:
             pocket.authLayer = AuthLayer.from_bytes(data, offset)
-            offset += AuthLayer.length()
+            offset += pocket.authLayer.length()
             if basicLayer.pocketSubType == PocketSubType.UploadRequest:
                 pocket.uploadRequestLayer = UploadRequestLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.DownloadRequest:
@@ -346,7 +346,7 @@ class Pocket:
 
         elif basicLayer.pocketType == PocketType.AuthResponse:
             pocket.authResponseLayer = AuthResponseLayer.from_bytes(data, offset)
-            offset += AuthResponseLayer.length()
+            offset += pocket.authResponseLayer.length()
             if basicLayer.pocketSubType == PocketSubType.ListResponse:
                 pocket.listResponseLayer = ListResponseLayer.from_bytes(data, offset)
 
@@ -361,8 +361,8 @@ class Pocket:
         self.basicLayer = basicLayer
         self.authLayer: AuthLayer | None = None
         self.authResponseLayer: AuthResponseLayer | None = None
-        self.segmentLayer: SegmentLayer | None = None,
-        self.akcLayer: AKCLayer | None = None,
+        self.segmentLayer: SegmentLayer | None = None
+        self.akcLayer: AKCLayer | None = None
 
         self.uploadRequestLayer: UploadRequestLayer | None = None
         self.downloadRequestLayer: DownloadRequestLayer | None = None
