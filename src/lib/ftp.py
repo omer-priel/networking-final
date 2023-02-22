@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from enum import IntEnum
 import struct
 import time
+from enum import IntEnum
 
 # struct link: https://docs.python.org/3.7/library/struct.html
 
 # Config
-BYTES_ORDER = 'little'
+BYTES_ORDER = "little"
+
 
 # Types
 class PocketType(IntEnum):
@@ -19,6 +20,7 @@ class PocketType(IntEnum):
     Segment = 3
     ACK = 4
     Close = 5
+
 
 class PocketSubType(IntEnum):
     Unknown = 0
@@ -36,9 +38,10 @@ class PocketSubType(IntEnum):
     ListSegment = 12
     ListComplited = 13
 
+
 # RUDP Level
 class BasicLayer:
-    FORMAT = 'ccL'
+    FORMAT = "ccL"
 
     @staticmethod
     def length() -> int:
@@ -47,22 +50,31 @@ class BasicLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> BasicLayer:
         pocketType, pocketSubType, pocketID = struct.unpack_from(BasicLayer.FORMAT, data, offset)
-        return BasicLayer(pocketID, PocketType(int.from_bytes(pocketType, BYTES_ORDER)), PocketSubType(int.from_bytes(pocketSubType, BYTES_ORDER)))
+        return BasicLayer(
+            pocketID,
+            PocketType(int.from_bytes(pocketType, BYTES_ORDER)),
+            PocketSubType(int.from_bytes(pocketSubType, BYTES_ORDER)),
+        )
 
-    def __init__(self, pocketID: int, pocketType = PocketType.Unknown, pocketSubType = PocketType.Unknown) -> None:
+    def __init__(self, pocketID: int, pocketType=PocketType.Unknown, pocketSubType=PocketType.Unknown) -> None:
         self.pocketType = pocketType
         self.pocketSubType = pocketSubType
         self.pocketID = pocketID
 
     def to_bytes(self) -> bytes:
-       return struct.pack(BasicLayer.FORMAT, int(self.pocketType).to_bytes(1, BYTES_ORDER), int(self.pocketSubType).to_bytes(1, BYTES_ORDER), self.pocketID)
+        return struct.pack(
+            BasicLayer.FORMAT,
+            int(self.pocketType).to_bytes(1, BYTES_ORDER),
+            int(self.pocketSubType).to_bytes(1, BYTES_ORDER),
+            self.pocketID,
+        )
 
     def __str__(self) -> str:
         return "| type: {}, sub-type: {}, id: {} |".format(self.pocketType, self.pocketSubType, self.pocketID)
 
 
 class AuthLayer:
-    FORMAT = 'LLL'
+    FORMAT = "LLL"
 
     @staticmethod
     def length() -> int:
@@ -79,14 +91,16 @@ class AuthLayer:
         self.maxWindowTimeout = maxWindowTimeout
 
     def to_bytes(self) -> bytes:
-       return struct.pack(AuthLayer.FORMAT, self.pocketFullSize, self.maxSingleSegmentSize, int(self.maxWindowTimeout * 1000))
+        return struct.pack(
+            AuthLayer.FORMAT, self.pocketFullSize, self.maxSingleSegmentSize, int(self.maxWindowTimeout * 1000)
+        )
 
     def __str__(self) -> str:
         return " size: {} |".format(self.pocketFullSize)
 
 
 class AuthResponseLayer:
-    FORMAT = 'LLL'
+    FORMAT = "LLL"
 
     @staticmethod
     def length() -> int:
@@ -103,14 +117,18 @@ class AuthResponseLayer:
         self.windowTimeout = windowTimeout
 
     def to_bytes(self) -> bytes:
-       return struct.pack(AuthResponseLayer.FORMAT, self.segmentsAmount, self.singleSegmentSize, int(self.windowTimeout * 1000))
+        return struct.pack(
+            AuthResponseLayer.FORMAT, self.segmentsAmount, self.singleSegmentSize, int(self.windowTimeout * 1000)
+        )
 
     def __str__(self) -> str:
-        return " segments: {}, size: {}, window-timeout: {} |".format(self.segmentsAmount, self.singleSegmentSize, self.windowTimeout)
+        return " segments: {}, size: {}, window-timeout: {} |".format(
+            self.segmentsAmount, self.singleSegmentSize, self.windowTimeout
+        )
 
 
 class SegmentLayer:
-    FORMAT = 'LI'
+    FORMAT = "LI"
 
     @staticmethod
     def length() -> int:
@@ -119,7 +137,7 @@ class SegmentLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> SegmentLayer:
         segmentID, segmentLength = struct.unpack_from(SegmentLayer.FORMAT, data, offset)
-        segment = data[offset + SegmentLayer.length():offset + SegmentLayer.length() + segmentLength]
+        segment = data[offset + SegmentLayer.length() : offset + SegmentLayer.length() + segmentLength]
         return SegmentLayer(segmentID, segment)
 
     def __init__(self, segmentID: int, data: bytes) -> None:
@@ -127,14 +145,14 @@ class SegmentLayer:
         self.data = data
 
     def to_bytes(self) -> bytes:
-       return struct.pack(SegmentLayer.FORMAT, self.segmentID, len(self.data)) + self.data
+        return struct.pack(SegmentLayer.FORMAT, self.segmentID, len(self.data)) + self.data
 
     def __str__(self) -> str:
         return " segment: {}, length: {} |".format(self.segmentID, len(self.data))
 
 
 class AKCLayer:
-    FORMAT = 'L'
+    FORMAT = "L"
 
     @staticmethod
     def length() -> int:
@@ -149,7 +167,7 @@ class AKCLayer:
         self.segmentID = segmentID
 
     def to_bytes(self) -> bytes:
-       return struct.pack(AKCLayer.FORMAT, self.segmentID)
+        return struct.pack(AKCLayer.FORMAT, self.segmentID)
 
     def __str__(self) -> str:
         return " akc-to-segment: {} |".format(self.segmentID)
@@ -161,7 +179,7 @@ class UploadRequestLayer:
     def from_bytes(data: bytes, offset: int) -> UploadRequestLayer:
         filePathLength = struct.unpack_from("I", data, offset)[0]
         offset += struct.calcsize("I")
-        filePath = data[offset: offset + filePathLength]
+        filePath = data[offset : offset + filePathLength]
         offset += filePathLength
         fileSize = struct.unpack_from("L", data, offset)[0]
 
@@ -175,7 +193,7 @@ class UploadRequestLayer:
         return struct.calcsize("I") + len(self.path) + struct.calcsize("L")
 
     def to_bytes(self) -> bytes:
-       return struct.pack("I", len(self.path)) + self.path.encode() + struct.pack("L", self.fileSize)
+        return struct.pack("I", len(self.path)) + self.path.encode() + struct.pack("L", self.fileSize)
 
     def __str__(self) -> str:
         return " file path: {}, size: {} |".format(self.path, self.fileSize)
@@ -189,7 +207,7 @@ class UploadResponseLayer:
         if errorMessageLength == 0:
             errorMessage = ""
         else:
-            errorMessage = bytes.decode(data[offset:offset + errorMessageLength - 1])
+            errorMessage = bytes.decode(data[offset : offset + errorMessageLength - 1])
 
         return UploadResponseLayer(ok, errorMessage)
 
@@ -201,10 +219,10 @@ class UploadResponseLayer:
         return struct.calcsize("?b") + len(self.errorMessage)
 
     def to_bytes(self) -> bytes:
-       if len(self.errorMessage) == 0:
+        if len(self.errorMessage) == 0:
             return struct.pack("?b", self.ok, 0)
 
-       return struct.pack("?b", self.ok, len(self.errorMessage)) + self.errorMessage.encode()
+        return struct.pack("?b", self.ok, len(self.errorMessage)) + self.errorMessage.encode()
 
     def __str__(self) -> str:
         return " ok: {}, message: {} |".format(self.ok, self.errorMessage)
@@ -215,7 +233,7 @@ class DownloadRequestLayer:
     def from_bytes(data: bytes, offset: int) -> DownloadRequestLayer:
         filePathLength = struct.unpack_from("I", data, offset)[0]
         offset += struct.calcsize("I")
-        filePath = data[offset: offset + filePathLength]
+        filePath = data[offset : offset + filePathLength]
         offset += filePathLength
 
         return DownloadRequestLayer(bytes.decode(filePath))
@@ -227,7 +245,7 @@ class DownloadRequestLayer:
         return struct.calcsize("I") + len(self.path)
 
     def to_bytes(self) -> bytes:
-       return struct.pack("I", len(self.path)) + self.path.encode()
+        return struct.pack("I", len(self.path)) + self.path.encode()
 
     def __str__(self) -> str:
         return " file path: {} |".format(self.path)
@@ -241,7 +259,7 @@ class DownloadResponseLayer:
         if errorMessageLength == 0:
             errorMessage = ""
         else:
-            errorMessage = bytes.decode(data[offset:offset + errorMessageLength - 1])
+            errorMessage = bytes.decode(data[offset : offset + errorMessageLength - 1])
 
         offset += errorMessageLength
         fileSize, updatedAt = struct.unpack_from("Ld", data, offset)
@@ -258,15 +276,21 @@ class DownloadResponseLayer:
         return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("Ld")
 
     def to_bytes(self) -> bytes:
-       if len(self.errorMessage) == 0:
+        if len(self.errorMessage) == 0:
             return struct.pack("?b", self.ok, 0) + struct.pack("Ld", self.fileSize, self.updatedAt)
 
-       return struct.pack("?b", self.ok, len(self.errorMessage)) + self.errorMessage.encode() + struct.pack("Ld", self.fileSize, self.updatedAt)
+        return (
+            struct.pack("?b", self.ok, len(self.errorMessage))
+            + self.errorMessage.encode()
+            + struct.pack("Ld", self.fileSize, self.updatedAt)
+        )
 
     def __str__(self) -> str:
         if not self.ok:
             return " ok: {}, message: {} |".format(self.ok, self.errorMessage)
-        return " ok: {}, message: {}, file-size: {}, updated at: {} |".format(self.ok, self.errorMessage, self.fileSize, time.ctime(self.updatedAt))
+        return " ok: {}, message: {}, file-size: {}, updated at: {} |".format(
+            self.ok, self.errorMessage, self.fileSize, time.ctime(self.updatedAt)
+        )
 
 
 class ListRequestLayer:
@@ -274,7 +298,7 @@ class ListRequestLayer:
     def from_bytes(data: bytes, offset: int) -> ListRequestLayer:
         directoryPathLength = struct.unpack_from("I", data, offset)[0]
         offset += struct.calcsize("I")
-        directoryPath = data[offset: offset + directoryPathLength]
+        directoryPath = data[offset : offset + directoryPathLength]
         offset += directoryPathLength
 
         return ListRequestLayer(bytes.decode(directoryPath))
@@ -286,7 +310,7 @@ class ListRequestLayer:
         return struct.calcsize("I") + len(self.path)
 
     def to_bytes(self) -> bytes:
-       return struct.pack("I", len(self.path)) + self.path.encode()
+        return struct.pack("I", len(self.path)) + self.path.encode()
 
     def __str__(self) -> str:
         return " directory path: {} |".format(self.path)
@@ -300,7 +324,7 @@ class ListResponseLayer:
         if errorMessageLength == 0:
             errorMessage = ""
         else:
-            errorMessage = bytes.decode(data[offset:offset + errorMessageLength - 1])
+            errorMessage = bytes.decode(data[offset : offset + errorMessageLength - 1])
 
         offset += errorMessageLength
         directoriesCount, filesCount = struct.unpack_from("LL", data, offset)
@@ -317,15 +341,21 @@ class ListResponseLayer:
         return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LL")
 
     def to_bytes(self) -> bytes:
-       if len(self.errorMessage) == 0:
+        if len(self.errorMessage) == 0:
             return struct.pack("?b", self.ok, 0) + struct.pack("LL", self.directoriesCount, self.filesCount)
 
-       return struct.pack("?b", self.ok, len(self.errorMessage)) + self.errorMessage.encode() + struct.pack("LL", self.directoriesCount, self.filesCount)
+        return (
+            struct.pack("?b", self.ok, len(self.errorMessage))
+            + self.errorMessage.encode()
+            + struct.pack("LL", self.directoriesCount, self.filesCount)
+        )
 
     def __str__(self) -> str:
         if not self.ok:
             return " ok: {}, message: {} |".format(self.ok, self.errorMessage)
-        return " ok: {}, message: {}, directories: {}, files: {} |".format(self.ok, self.errorMessage, self.directoriesCount, self.filesCount)
+        return " ok: {}, message: {}, directories: {}, files: {} |".format(
+            self.ok, self.errorMessage, self.directoriesCount, self.filesCount
+        )
 
 
 def pack_directory_block(directoryName: str, updatedAt: float) -> bytes:
@@ -338,7 +368,7 @@ def unpack_directory_block(data: bytes, offset: int) -> tuple[tuple[str, float],
     if directoryNameLength == 0:
         directoryName = ""
     else:
-        directoryName = bytes.decode(data[offset:offset + directoryNameLength])
+        directoryName = bytes.decode(data[offset : offset + directoryNameLength])
     offset += directoryNameLength
     updatedAt = struct.unpack_from("d", data, offset)[0]
     offset += struct.calcsize("d")
@@ -356,7 +386,7 @@ def unpack_file_block(data: bytes, offset: int) -> tuple[tuple[str, float, int],
     if fileNameLength == 0:
         fileName = ""
     else:
-        fileName = bytes.decode(data[offset:offset + fileNameLength])
+        fileName = bytes.decode(data[offset : offset + fileNameLength])
     offset += fileNameLength
     updatedAt, fileSize = struct.unpack_from("dL", data, offset)
     offset += struct.calcsize("dL")
@@ -410,20 +440,34 @@ class Pocket:
         elif basicLayer.pocketType == PocketType.ACK:
             akcLayer = AKCLayer.from_bytes(data, offset)
 
-        return Pocket(basicLayer=basicLayer,
-                      authLayer=authLayer, authResponseLayer=authResponseLayer,
-                      segmentLayer=segmentLayer, akcLayer=akcLayer,
-                      uploadRequestLayer=uploadRequestLayer, uploadResponseLayer=uploadResponseLayer,
-                      downloadRequestLayer=downloadRequestLayer, downloadResponseLayer=downloadResponseLayer,
-                      listRequestLayer=listRequestLayer, listResponseLayer=listResponseLayer)
+        return Pocket(
+            basicLayer=basicLayer,
+            authLayer=authLayer,
+            authResponseLayer=authResponseLayer,
+            segmentLayer=segmentLayer,
+            akcLayer=akcLayer,
+            uploadRequestLayer=uploadRequestLayer,
+            uploadResponseLayer=uploadResponseLayer,
+            downloadRequestLayer=downloadRequestLayer,
+            downloadResponseLayer=downloadResponseLayer,
+            listRequestLayer=listRequestLayer,
+            listResponseLayer=listResponseLayer,
+        )
 
-
-    def __init__(self, basicLayer: BasicLayer,
-                 authLayer: AuthLayer | None = None, authResponseLayer: AuthResponseLayer | None = None,
-                 segmentLayer: SegmentLayer | None = None, akcLayer: AKCLayer | None = None,
-                 uploadRequestLayer: UploadRequestLayer | None = None, uploadResponseLayer: UploadResponseLayer | None = None,
-                 downloadRequestLayer: DownloadRequestLayer | None = None, downloadResponseLayer: DownloadResponseLayer | None = None,
-                 listRequestLayer: ListRequestLayer | None = None, listResponseLayer: ListResponseLayer | None = None) -> None:
+    def __init__(
+        self,
+        basicLayer: BasicLayer,
+        authLayer: AuthLayer | None = None,
+        authResponseLayer: AuthResponseLayer | None = None,
+        segmentLayer: SegmentLayer | None = None,
+        akcLayer: AKCLayer | None = None,
+        uploadRequestLayer: UploadRequestLayer | None = None,
+        uploadResponseLayer: UploadResponseLayer | None = None,
+        downloadRequestLayer: DownloadRequestLayer | None = None,
+        downloadResponseLayer: DownloadResponseLayer | None = None,
+        listRequestLayer: ListRequestLayer | None = None,
+        listResponseLayer: ListResponseLayer | None = None,
+    ) -> None:
         self.basicLayer = basicLayer
         self.authLayer = authLayer
         self.authResponseLayer = authResponseLayer

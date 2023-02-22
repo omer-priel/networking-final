@@ -1,23 +1,23 @@
 # entry point to Application
 
+import logging
 import os
 import os.path
-import logging
 import socket
 from typing import Any
 
 from src.lib.config import config, init_config, init_logging
-
 from src.lib.ftp import *
 
 # config
 
-SINGLE_SEGMENT_SIZE_LIMIT = (10, 1500) # [byte]
-WINDOW_TIMEOUT_LIMIT = (0.1, 1) # [s]
+SINGLE_SEGMENT_SIZE_LIMIT = (10, 1500)  # [byte]
+WINDOW_TIMEOUT_LIMIT = (0.1, 1)  # [s]
 
 
 # globals
 appSocket: socket.socket
+
 
 def main() -> None:
     init_app()
@@ -30,15 +30,17 @@ def init_app() -> None:
     init_logging()
     init_strorage()
 
-    logging.info('The app is initialized')
+    logging.info("The app is initialized")
 
 
 def init_strorage():
     if not os.path.isdir(config.APP_STORAGE_PATH):
         os.mkdir(config.APP_STORAGE_PATH)
 
+
 def get_path(filePath: str) -> str:
     return config.APP_STORAGE_PATH + "/" + filePath
+
 
 def create_socket() -> None:
     global appSocket
@@ -50,7 +52,7 @@ def create_socket() -> None:
     appSocket.setblocking(1)
     appSocket.settimeout(config.SOCKET_TIMEOUT)
 
-    logging.info('The app socket initialized on ' + config.APP_HOST + ":" + str(config.APP_PORT))
+    logging.info("The app socket initialized on " + config.APP_HOST + ":" + str(config.APP_PORT))
 
 
 def main_loop() -> None:
@@ -72,8 +74,10 @@ def main_loop() -> None:
 currentPocketID = 0
 nextPocketID = False
 
+
 def get_current_pocketID() -> int:
     return currentPocketID
+
 
 def create_current_pocketID(forNextRequest=False) -> int:
     global currentPocketID, nextPocketID
@@ -172,7 +176,9 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
         try:
             segmentPocket = recv_pocket()
 
-            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment):
+            if (not segmentPocket.segmentLayer) or (
+                not segmentPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment
+            ):
                 logging.error("Get pocket that is not upload segment")
             else:
                 segmentID = segmentPocket.segmentLayer.segmentID
@@ -198,7 +204,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     # clean up
     fileStream.close()
 
-    logging.info("The file \"{}\" uploaded".format(reqPocket.uploadRequestLayer.path))
+    logging.info('The file "{}" uploaded'.format(reqPocket.uploadRequestLayer.path))
 
 
 def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
@@ -209,7 +215,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
 
     filePath = get_path(reqPocket.downloadRequestLayer.path)
     if not os.path.isfile(filePath):
-        errorMessage = "The file \"{}\" dos not exists!".format(reqPocket.downloadRequestLayer.path)
+        errorMessage = 'The file "{}" dos not exists!'.format(reqPocket.downloadRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
@@ -278,7 +284,9 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
                 appSocket.sendto(segmentPocket.to_bytes(), clientAddress)
         else:
             # refresh window
-            logging.debug("refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount))
+            logging.debug(
+                "refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount)
+            )
             timeout = False
             while not timeout:
                 try:
@@ -305,7 +313,6 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
 
             last = time.time()
 
-
     fileStream.close()
 
     # send close pocket
@@ -320,7 +327,7 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
 
     directoryPath = get_path(reqPocket.listRequestLayer.path)
     if not os.path.isdir(directoryPath):
-        errorMessage = "The directory \"{}\" dos not exists!".format(reqPocket.listRequestLayer.path)
+        errorMessage = 'The directory "{}" dos not exists!'.format(reqPocket.listRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
@@ -332,7 +339,7 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
 
     directoriesAndFiles = os.listdir(directoryPath)
     directories = [directory for directory in directoriesAndFiles if os.path.isdir(directoryPath + "/" + directory)]
-    files = [file for file in directoriesAndFiles if os.path.isfile (directoryPath + "/" + file)]
+    files = [file for file in directoriesAndFiles if os.path.isfile(directoryPath + "/" + file)]
 
     # check if exist directories or files
     if len(directories) == 0 and len(files) == 0:
@@ -402,9 +409,9 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
                 segmentID = windowToSend.pop(0)
                 if segmentID * singleSegmentSize <= contentSize - singleSegmentSize:
                     # is not the last segment
-                    segment = content[segmentID * singleSegmentSize: (segmentID + 1) * singleSegmentSize]
+                    segment = content[segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize]
                 else:
-                    segment = content[segmentID * singleSegmentSize:]
+                    segment = content[segmentID * singleSegmentSize :]
 
                 segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment, PocketSubType.ListSegment))
                 segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
@@ -414,7 +421,9 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
                 appSocket.sendto(segmentPocket.to_bytes(), clientAddress)
         else:
             # refresh window
-            logging.debug("refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount))
+            logging.debug(
+                "refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount)
+            )
             timeout = False
             while not timeout:
                 try:
@@ -443,7 +452,6 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
 
     # send close pocket
     send_close(pocketID, clientAddress)
-
 
 
 if __name__ == "__main__":

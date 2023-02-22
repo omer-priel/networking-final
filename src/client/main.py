@@ -1,11 +1,11 @@
 # entry point to Application
 
-import sys
+import logging
 import os
 import os.path
-import time
-import logging
 import socket
+import sys
+import time
 
 from prettytable import PrettyTable
 
@@ -14,15 +14,17 @@ from src.lib.ftp import *
 
 clientSocket: socket.socket
 
-MAX_SEGMENT_SIZE = 1000 # [byte]
-MAX_WINDOW_TIMEOUT = 1 # [s]
+MAX_SEGMENT_SIZE = 1000  # [byte]
+MAX_WINDOW_TIMEOUT = 1  # [s]
+
 
 def init_app() -> None:
     init_config()
     init_logging()
     create_socket()
 
-    logging.info('The app is initialized')
+    logging.info("The app is initialized")
+
 
 def create_socket() -> None:
     global clientSocket
@@ -34,13 +36,13 @@ def create_socket() -> None:
     clientSocket.setblocking(1)
     clientSocket.settimeout(config.SOCKET_TIMEOUT)
 
-    print('The client socket initialized on ' + config.CLIENT_HOST + ":" + str(config.CLIENT_PORT))
+    print("The client socket initialized on " + config.CLIENT_HOST + ":" + str(config.CLIENT_PORT))
 
 
 def upload_file(filename: str, destination: str) -> None:
     # load the file info
     if not os.path.isfile(filename):
-        print("The file\"" + filename + "\" don't exists!")
+        print('The file"' + filename + "\" don't exists!")
         return None
 
     fileStream = open(filename, "r")
@@ -114,7 +116,9 @@ def upload_file(filename: str, destination: str) -> None:
                 clientSocket.sendto(segmentPocket.to_bytes(), appAddress)
         else:
             # refresh window
-            logging.debug("refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount))
+            logging.debug(
+                "refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount)
+            )
             timeout = False
             while not timeout:
                 try:
@@ -126,7 +130,7 @@ def upload_file(filename: str, destination: str) -> None:
                     pocket = Pocket.from_bytes(data)
                     if pocket.basicLayer.pocketType == PocketType.Close:
                         # complit the upload
-                        print("The file \"{}\" upload as \"{}\" to the app.".format(filename, destination))
+                        print('The file "{}" upload as "{}" to the app.'.format(filename, destination))
                         timeout = True
                         uploading = False
                     elif pocket.akcLayer:
@@ -142,7 +146,6 @@ def upload_file(filename: str, destination: str) -> None:
 
             last = time.time()
 
-
     fileStream.close()
 
 
@@ -157,7 +160,7 @@ def download_file(filePath: str, destination: str):
     # create and remove again destination for checking
     fileStream = open(destination, "a")
     if not fileStream.writable():
-        print("Error: The file \"{}\" is not writable!".format(destination))
+        print('Error: The file "{}" is not writable!'.format(destination))
         fileStream.close()
         os.remove(destination)
         return None
@@ -214,7 +217,7 @@ def download_file(filePath: str, destination: str):
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
             segmentPocket = Pocket.from_bytes(data)
-            itFirstSegment =  segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
+            itFirstSegment = segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
         except socket.error:
             pass
 
@@ -227,7 +230,9 @@ def download_file(filePath: str, destination: str):
                 data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
                 segmentPocket = Pocket.from_bytes(data)
 
-            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment):
+            if (not segmentPocket.segmentLayer) or (
+                not segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
+            ):
                 logging.error("Get pocket that is not download segment")
             else:
                 segmentID = segmentPocket.segmentLayer.segmentID
@@ -255,7 +260,7 @@ def download_file(filePath: str, destination: str):
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
             closePocket = Pocket.from_bytes(data)
-            closed =  closePocket.basicLayer.pocketType == PocketType.Close
+            closed = closePocket.basicLayer.pocketType == PocketType.Close
         except socket.error:
             pass
 
@@ -267,7 +272,7 @@ def download_file(filePath: str, destination: str):
     # clean up
     fileStream.close()
 
-    logging.info("The file \"{}\" downloaded to \"{}\".".format(filePath, destination))
+    logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
 
 
 def send_list_command(directoryPath: str):
@@ -324,7 +329,7 @@ def send_list_command(directoryPath: str):
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
             segmentPocket = Pocket.from_bytes(data)
-            itFirstSegment =  segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment
+            itFirstSegment = segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment
         except socket.error:
             pass
 
@@ -337,7 +342,9 @@ def send_list_command(directoryPath: str):
                 data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
                 segmentPocket = Pocket.from_bytes(data)
 
-            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment):
+            if (not segmentPocket.segmentLayer) or (
+                not segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment
+            ):
                 logging.error("Get pocket that is not list segment")
             else:
                 segmentID = segmentPocket.segmentLayer.segmentID
@@ -365,7 +372,7 @@ def send_list_command(directoryPath: str):
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
             closePocket = Pocket.from_bytes(data)
-            closed =  closePocket.basicLayer.pocketType == PocketType.Close
+            closed = closePocket.basicLayer.pocketType == PocketType.Close
         except socket.error:
             pass
 
@@ -409,9 +416,11 @@ def print_directory_content(files: list, directories: list) -> None:
 
     print(table)
 
+
 def print_help():
     # TODO print help command
     pass
+
 
 def main() -> None:
     init_app()
@@ -466,8 +475,7 @@ def main() -> None:
         send_list_command(directoryPath)
 
     else:
-        print("The command \"{}\" not exists".format(sys.argv[1]))
-
+        print('The command "{}" not exists'.format(sys.argv[1]))
 
 
 if __name__ == "__main__":
