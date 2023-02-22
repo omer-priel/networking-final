@@ -1,9 +1,10 @@
 # config of the apps
 
-import os
 import logging
+import os
 
 from dotenv import load_dotenv
+
 
 class _config:
     APP_HOST: str | None = None
@@ -33,4 +34,4 @@ def init_config() -> None:
 
 
 def init_logging() -> None:
-    logging.basicConfig(level=config.LOGGING_LEVEL, format='%(asctime)s %(levelname)s: %(message)s', datefmt='%H:%M:%S')
+    logging.basicConfig(level=config.LOGGING_LEVEL, format="%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S")

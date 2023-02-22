@@ -146,20 +146,40 @@ Path: path of the directory (folder) on the server
 
 #### List Response Layer
 
-Head
-
-|  Files Count |
-|--------------|
-| 8 Bytes      |
-
-File Row
-
-| File Name Size |        File Name         | File Size | Updated At |
-|----------------|-------------------------:|----------:|-----------:|
-| 4 Bytes        | (File Name Size) * Bytes | 8 Bytes   | 8 Bytes    |
+| OK      | Error Message Length |  Directories Count |  Files Count |
+|---------|---------------------:|-------------------:|-------------:|
+| 1 Bytes | 1 Bytes              | 8 Bytes            | 8 Bytes      |
 
 Type: Auth Response Layer
 Sub Type: 10
+
+### List Ready For Downloading
+
+Type: AKC Layer
+Sub Type: 11
+
+### List Segment Layer
+
+The full combine segments is:
+list of directories
+
+| Name Length |         Name          | Updated At |
+|-------------|----------------------:|-----------:|
+| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    |
+
+and list of files
+
+| Name Length |         Name          | Updated At | File Size  |
+|-------------|----------------------:|-----------:|-----------:|
+| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
+
+Type: Segment Layer
+Sub Type: 12
+
+### List Complited
+
+Type: AKC Layer
+Sub Type: 13
 
 ## Links
 

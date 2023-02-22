@@ -86,6 +86,15 @@ test-client-upload-multi:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/c/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/c/100.txt
 
+test-client-upload-range:
+			PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/c/100.txt
+	for i in {1..10..2}; do \
+		PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest range/$$i-$$i/$$i.txt ;\
+		for j in {1..10..1}; do \
+			PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest range/$$i-$$j.txt ;\
+		done; \
+	done;
+
 test-client-upload-all:
 	make test-client-upload
 	make test-client-upload-child
@@ -150,5 +159,8 @@ test-client-list-a:
 test-client-list-b:
 	PYTHONPATH=. poetry run python src/client/main.py list b
 
-test-client-list-c:
+test-client-list-a-c:
 	PYTHONPATH=. poetry run python src/client/main.py list a/c
+
+test-client-list-range:
+	PYTHONPATH=. poetry run python src/client/main.py list range
