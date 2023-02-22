@@ -109,6 +109,10 @@ test-client-upload-all:
 	make test-client-upload-child-10000
 	make test-client-upload-multi
 
+test-client-upload-not-found:
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest ../100.txt
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/abdasda
+
 test-client-download: temp
 	PYTHONPATH=. poetry run python src/client/main.py download A.md ./temp/A.md
 
@@ -150,6 +154,10 @@ test-client-download-all:
 	make test-client-download-child-10000
 	make test-client-download-multi
 
+test-client-download-not-found:
+	PYTHONPATH=. poetry run python src/client/main.py download ../.env ./temp/.enve
+	PYTHONPATH=. poetry run python src/client/main.py download abdasda ./temp/abdasda
+
 test-client-list:
 	PYTHONPATH=. poetry run python src/client/main.py list
 
@@ -167,3 +175,9 @@ test-client-list-a-c:
 
 test-client-list-range:
 	PYTHONPATH=. poetry run python src/client/main.py list range
+
+test-client-list-not-found:
+	PYTHONPATH=. poetry run python src/client/main.py list ..
+	PYTHONPATH=. poetry run python src/client/main.py list abdasda
+
+test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found

@@ -255,7 +255,7 @@ class DownloadResponseLayer:
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> DownloadResponseLayer:
         ok, errorMessageLength = struct.unpack_from("?b", data, offset)
-        offset = struct.calcsize("?b")
+        offset += struct.calcsize("?b")
         if errorMessageLength == 0:
             errorMessage = ""
         else:

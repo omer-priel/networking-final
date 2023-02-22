@@ -42,6 +42,10 @@ def get_path(filePath: str) -> str:
     return config.APP_STORAGE_PATH + "/" + filePath
 
 
+def in_storage(path: str):
+    return os.path.commonpath([os.path.abspath(path), os.path.abspath(config.APP_STORAGE_PATH)]) == os.path.abspath(config.APP_STORAGE_PATH)
+
+
 def create_socket() -> None:
     global appSocket
 
@@ -122,9 +126,11 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     if not reqPocket.uploadRequestLayer:
         errorMessage = "This is not upload request"
     elif len(reqPocket.uploadRequestLayer.path) > config.FILE_PATH_MAX_LENGTH:
-        errorMessage = "The file path cannot be more then " + config.FILE_PATH_MAX_LENGTH + " chars"
+        errorMessage = "The file path cannot be more then {} chars".format(config.FILE_PATH_MAX_LENGTH)
     elif reqPocket.uploadRequestLayer.fileSize <= 0:
         errorMessage = "The file cannot be empty"
+    elif not in_storage(reqPocket.uploadRequestLayer.path):
+            errorMessage = "The path {} is not legal".format(reqPocket.uploadRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
@@ -215,6 +221,8 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
 
     filePath = get_path(reqPocket.downloadRequestLayer.path)
     if not os.path.isfile(filePath):
+        errorMessage = 'The file "{}" dos not exists!'.format(reqPocket.downloadRequestLayer.path)
+    elif not in_storage(reqPocket.downloadRequestLayer.path):
         errorMessage = 'The file "{}" dos not exists!'.format(reqPocket.downloadRequestLayer.path)
 
     if errorMessage:
@@ -327,6 +335,8 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
 
     directoryPath = get_path(reqPocket.listRequestLayer.path)
     if not os.path.isdir(directoryPath):
+        errorMessage = 'The directory "{}" dos not exists!'.format(reqPocket.listRequestLayer.path)
+    elif not in_storage(reqPocket.listRequestLayer.path):
         errorMessage = 'The directory "{}" dos not exists!'.format(reqPocket.listRequestLayer.path)
 
     if errorMessage:

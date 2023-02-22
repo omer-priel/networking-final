@@ -421,10 +421,10 @@ def print_directory_content(files: list, directories: list) -> None:
 
 def print_help():
     print("client is CLI client for custom app like \"FTP\" based on UDP.")
-    print("\tclient --help - print the help content")
-    print("\tclient upload [--dest <destination>] <file> - upload file")
-    print("\tclient download <remote file> [destination] - download file")
-    print("\tclient list [remote directory] - print directory content")
+    print("  client --help                               - print the help content")
+    print("  client upload [--dest <destination>] <file> - upload file")
+    print("  client download <remote file> [destination] - download file")
+    print("  client list [remote directory]              - print directory content")
 
 
 def main() -> None:
