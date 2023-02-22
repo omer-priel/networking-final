@@ -399,87 +399,52 @@ def unpack_file_block(data: bytes, offset: int) -> tuple[tuple[str, float, int],
 class Pocket:
     @staticmethod
     def from_bytes(data: bytes) -> Pocket:
-        authLayer = None
-        authResponseLayer = None
-        segmentLayer = None
-        akcLayer = None
-
-        uploadRequestLayer = None
-        uploadResponseLayer = None
-        downloadRequestLayer = None
-        downloadResponseLayer = None
-        listRequestLayer = None
-        listResponseLayer = None
-
         offset = 0
         basicLayer = BasicLayer.from_bytes(data, offset)
         offset += BasicLayer.length()
 
+        pocket = Pocket(basicLayer)
+
         if basicLayer.pocketType == PocketType.Auth:
-            authLayer = AuthLayer.from_bytes(data, offset)
+            pocket.authLayer = AuthLayer.from_bytes(data, offset)
             offset += AuthLayer.length()
             if basicLayer.pocketSubType == PocketSubType.UploadRequest:
-                uploadRequestLayer = UploadRequestLayer.from_bytes(data, offset)
+                pocket.uploadRequestLayer = UploadRequestLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.DownloadRequest:
-                downloadRequestLayer = DownloadRequestLayer.from_bytes(data, offset)
+                pocket.downloadRequestLayer = DownloadRequestLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.ListRequest:
-                listRequestLayer = ListRequestLayer.from_bytes(data, offset)
+                pocket.listRequestLayer = ListRequestLayer.from_bytes(data, offset)
 
         elif basicLayer.pocketType == PocketType.AuthResponse:
-            authResponseLayer = AuthResponseLayer.from_bytes(data, offset)
+            pocket.authResponseLayer = AuthResponseLayer.from_bytes(data, offset)
             offset += AuthResponseLayer.length()
             if basicLayer.pocketSubType == PocketSubType.UploadResponse:
-                uploadResponseLayer = UploadResponseLayer.from_bytes(data, offset)
+                pocket.uploadResponseLayer = UploadResponseLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.DownloadResponse:
-                downloadResponseLayer = DownloadResponseLayer.from_bytes(data, offset)
+                pocket.downloadResponseLayer = DownloadResponseLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.ListResponse:
-                listResponseLayer = ListResponseLayer.from_bytes(data, offset)
+                pocket.listResponseLayer = ListResponseLayer.from_bytes(data, offset)
 
         elif basicLayer.pocketType == PocketType.Segment:
-            segmentLayer = SegmentLayer.from_bytes(data, offset)
+            pocket.segmentLayer = SegmentLayer.from_bytes(data, offset)
         elif basicLayer.pocketType == PocketType.ACK:
-            akcLayer = AKCLayer.from_bytes(data, offset)
+            pocket.akcLayer = AKCLayer.from_bytes(data, offset)
 
-        return Pocket(
-            basicLayer=basicLayer,
-            authLayer=authLayer,
-            authResponseLayer=authResponseLayer,
-            segmentLayer=segmentLayer,
-            akcLayer=akcLayer,
-            uploadRequestLayer=uploadRequestLayer,
-            uploadResponseLayer=uploadResponseLayer,
-            downloadRequestLayer=downloadRequestLayer,
-            downloadResponseLayer=downloadResponseLayer,
-            listRequestLayer=listRequestLayer,
-            listResponseLayer=listResponseLayer,
-        )
+        return pocket
 
-    def __init__(
-        self,
-        basicLayer: BasicLayer,
-        authLayer: AuthLayer | None = None,
-        authResponseLayer: AuthResponseLayer | None = None,
-        segmentLayer: SegmentLayer | None = None,
-        akcLayer: AKCLayer | None = None,
-        uploadRequestLayer: UploadRequestLayer | None = None,
-        uploadResponseLayer: UploadResponseLayer | None = None,
-        downloadRequestLayer: DownloadRequestLayer | None = None,
-        downloadResponseLayer: DownloadResponseLayer | None = None,
-        listRequestLayer: ListRequestLayer | None = None,
-        listResponseLayer: ListResponseLayer | None = None,
-    ) -> None:
+    def __init__(self, basicLayer: BasicLayer) -> None:
         self.basicLayer = basicLayer
-        self.authLayer = authLayer
-        self.authResponseLayer = authResponseLayer
-        self.segmentLayer = segmentLayer
-        self.akcLayer = akcLayer
+        self.authLayer: AuthLayer | None = None
+        self.authResponseLayer: AuthResponseLayer | None = None
+        self.segmentLayer: SegmentLayer | None = None,
+        self.akcLayer: AKCLayer | None = None,
 
-        self.uploadRequestLayer = uploadRequestLayer
-        self.uploadResponseLayer = uploadResponseLayer
-        self.downloadRequestLayer = downloadRequestLayer
-        self.downloadResponseLayer = downloadResponseLayer
-        self.listRequestLayer = listRequestLayer
-        self.listResponseLayer = listResponseLayer
+        self.uploadRequestLayer: UploadRequestLayer | None = None
+        self.uploadResponseLayer: UploadResponseLayer | None = None
+        self.downloadRequestLayer: DownloadRequestLayer | None = None
+        self.downloadResponseLayer: DownloadResponseLayer | None = None
+        self.listRequestLayer: ListRequestLayer | None = None,
+        self.listResponseLayer: ListResponseLayer | None = None,
 
     def get_id(self):
         return self.basicLayer.pocketID
