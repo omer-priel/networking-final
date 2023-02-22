@@ -32,6 +32,9 @@ class PocketSubType(IntEnum):
     DownloadComplited = 8
     ListRequest = 9
     ListResponse = 10
+    ListReadyForDownloading = 11
+    ListSegment = 12
+    ListComplited = 13
 
 # RUDP Level
 class BasicLayer:
@@ -266,6 +269,65 @@ class DownloadResponseLayer:
         return " ok: {}, message: {}, file-size: {}, updated at: {} |".format(self.ok, self.errorMessage, self.fileSize, time.ctime(self.updatedAt))
 
 
+class ListRequestLayer:
+    @staticmethod
+    def from_bytes(data: bytes, offset: int) -> ListRequestLayer:
+        directoryPathLength = struct.unpack_from("I", data, offset)[0]
+        offset += struct.calcsize("I")
+        directoryPath = data[offset: offset + directoryPathLength]
+        offset += directoryPathLength
+
+        return ListRequestLayer(bytes.decode(directoryPath))
+
+    def __init__(self, directoryPath: str) -> None:
+        self.path = directoryPath
+
+    def length(self) -> int:
+        return struct.calcsize("I") + len(self.path)
+
+    def to_bytes(self) -> bytes:
+       return struct.pack("I", len(self.path)) + self.path.encode()
+
+    def __str__(self) -> str:
+        return " directory path: {} |".format(self.path)
+
+
+class ListResponseLayer:
+    @staticmethod
+    def from_bytes(data: bytes, offset: int) -> ListResponseLayer:
+        ok, errorMessageLength = struct.unpack_from("?b", data, offset)
+        offset = struct.calcsize("?b")
+        if errorMessageLength == 0:
+            errorMessage = ""
+        else:
+            errorMessage = bytes.decode(data[offset:offset + errorMessageLength - 1])
+
+        offset += errorMessageLength
+        directoriesCount, filesCount = struct.unpack_from("LL", data, offset)
+
+        return ListResponseLayer(ok, errorMessage, directoriesCount, filesCount)
+
+    def __init__(self, ok: bool, errorMessage: str, directoriesCount: int, filesCount: int) -> None:
+        self.ok = ok
+        self.errorMessage = errorMessage
+        self.directoriesCount = directoriesCount
+        self.filesCount = filesCount
+
+    def length(self) -> int:
+        return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LL")
+
+    def to_bytes(self) -> bytes:
+       if len(self.errorMessage) == 0:
+            return struct.pack("?b", self.ok, 0) + struct.pack("LL", self.directoriesCount, self.filesCount)
+
+       return struct.pack("?b", self.ok, len(self.errorMessage)) + self.errorMessage.encode() + struct.pack("LL", self.directoriesCount, self.filesCount)
+
+    def __str__(self) -> str:
+        if not self.ok:
+            return " ok: {}, message: {} |".format(self.ok, self.errorMessage)
+        return " ok: {}, message: {}, directories: {}, files: {} |".format(self.ok, self.errorMessage, self.directoriesCount, self.filesCount)
+
+
 # A socket pocket
 # with parsing and saving all the layers of the app
 class Pocket:
@@ -280,6 +342,8 @@ class Pocket:
         uploadResponseLayer = None
         downloadRequestLayer = None
         downloadResponseLayer = None
+        listRequestLayer = None
+        listResponseLayer = None
 
         offset = 0
         basicLayer = BasicLayer.from_bytes(data, offset)
@@ -292,6 +356,8 @@ class Pocket:
                 uploadRequestLayer = UploadRequestLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.DownloadRequest:
                 downloadRequestLayer = DownloadRequestLayer.from_bytes(data, offset)
+            elif basicLayer.pocketSubType == PocketSubType.ListRequest:
+                listRequestLayer = ListRequestLayer.from_bytes(data, offset)
 
         elif basicLayer.pocketType == PocketType.AuthResponse:
             authResponseLayer = AuthResponseLayer.from_bytes(data, offset)
@@ -300,6 +366,8 @@ class Pocket:
                 uploadResponseLayer = UploadResponseLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.DownloadResponse:
                 downloadResponseLayer = DownloadResponseLayer.from_bytes(data, offset)
+            elif basicLayer.pocketSubType == PocketSubType.ListResponse:
+                listResponseLayer = ListResponseLayer.from_bytes(data, offset)
 
         elif basicLayer.pocketType == PocketType.Segment:
             segmentLayer = SegmentLayer.from_bytes(data, offset)
@@ -310,14 +378,16 @@ class Pocket:
                       authLayer=authLayer, authResponseLayer=authResponseLayer,
                       segmentLayer=segmentLayer, akcLayer=akcLayer,
                       uploadRequestLayer=uploadRequestLayer, uploadResponseLayer=uploadResponseLayer,
-                      downloadRequestLayer=downloadRequestLayer, downloadResponseLayer=downloadResponseLayer)
+                      downloadRequestLayer=downloadRequestLayer, downloadResponseLayer=downloadResponseLayer,
+                      listRequestLayer=listRequestLayer, listResponseLayer=listResponseLayer)
 
 
     def __init__(self, basicLayer: BasicLayer,
                  authLayer: AuthLayer | None = None, authResponseLayer: AuthResponseLayer | None = None,
                  segmentLayer: SegmentLayer | None = None, akcLayer: AKCLayer | None = None,
                  uploadRequestLayer: UploadRequestLayer | None = None, uploadResponseLayer: UploadResponseLayer | None = None,
-                 downloadRequestLayer: DownloadRequestLayer | None = None, downloadResponseLayer: DownloadResponseLayer | None = None) -> None:
+                 downloadRequestLayer: DownloadRequestLayer | None = None, downloadResponseLayer: DownloadResponseLayer | None = None,
+                 listRequestLayer: ListRequestLayer | None = None, listResponseLayer: ListResponseLayer | None = None) -> None:
         self.basicLayer = basicLayer
         self.authLayer = authLayer
         self.authResponseLayer = authResponseLayer
@@ -328,6 +398,8 @@ class Pocket:
         self.uploadResponseLayer = uploadResponseLayer
         self.downloadRequestLayer = downloadRequestLayer
         self.downloadResponseLayer = downloadResponseLayer
+        self.listRequestLayer = listRequestLayer
+        self.listResponseLayer = listResponseLayer
 
     def get_id(self):
         return self.basicLayer.pocketID
@@ -341,12 +413,16 @@ class Pocket:
                 data += self.uploadRequestLayer.to_bytes()
             elif self.downloadRequestLayer:
                 data += self.downloadRequestLayer.to_bytes()
+            elif self.listRequestLayer:
+                data += self.listRequestLayer.to_bytes()
         elif self.authResponseLayer:
             data += self.authResponseLayer.to_bytes()
             if self.uploadResponseLayer:
                 data += self.uploadResponseLayer.to_bytes()
             elif self.downloadResponseLayer:
                 data += self.downloadResponseLayer.to_bytes()
+            elif self.listResponseLayer:
+                data += self.listResponseLayer.to_bytes()
         elif self.segmentLayer:
             data += self.segmentLayer.to_bytes()
         elif self.akcLayer:
@@ -363,12 +439,16 @@ class Pocket:
                 ret += str(self.uploadRequestLayer)
             elif self.downloadRequestLayer:
                 ret += str(self.downloadRequestLayer)
+            elif self.listRequestLayer:
+                ret += str(self.listRequestLayer)
         elif self.authResponseLayer:
             ret += str(self.authResponseLayer)
             if self.uploadResponseLayer:
                 ret += str(self.uploadResponseLayer)
             elif self.downloadResponseLayer:
                 ret += str(self.downloadResponseLayer)
+            elif self.listResponseLayer:
+                ret += str(self.listResponseLayer)
         elif self.segmentLayer:
             ret += str(self.segmentLayer)
         elif self.akcLayer:

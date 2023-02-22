@@ -146,9 +146,9 @@ Path: path of the directory (folder) on the server
 
 #### List Response Layer
 
-| OK      | Error Message Length |  Files Count |
-|---------|---------------------:|-------------:|
-| 1 Bytes | 1 Bytes              | 8 Bytes      |
+| OK      | Error Message Length |  Directories Count |  Files Count |
+|---------|---------------------:|-------------------:|-------------:|
+| 1 Bytes | 1 Bytes              | 8 Bytes            | 8 Bytes      |
 
 Type: Auth Response Layer
 Sub Type: 10
