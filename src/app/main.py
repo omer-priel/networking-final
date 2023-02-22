@@ -70,13 +70,18 @@ def main_loop() -> None:
 
 # working with clients
 currentPocketID = 0
+nextPocketID = False
 
 def get_current_pocketID() -> int:
     return currentPocketID
 
-def create_current_pocketID() -> int:
-    global currentPocketID
-    currentPocketID += 1
+def create_current_pocketID(forNextRequest=False) -> int:
+    global currentPocketID, nextPocketID
+    if not nextPocketID:
+        currentPocketID += 1
+
+    nextPocketID = forNextRequest
+
     return currentPocketID
 
 
@@ -167,16 +172,16 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     # recv segments
     while len(neededSegments) > 0:
         try:
-            segmetPocket = recv_pocket()
+            segmentPocket = recv_pocket()
 
-            if (not segmetPocket.segmentLayer) or (not segmetPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment):
+            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment):
                 logging.error("Get pocket that is not upload segment")
             else:
-                segmentID = segmetPocket.segmentLayer.segmentID
+                segmentID = segmentPocket.segmentLayer.segmentID
                 if segmentID in neededSegments:
                     # add new segment
                     neededSegments.remove(segmentID)
-                    segments[segmentID] = segmetPocket.segmentLayer.data
+                    segments[segmentID] = segmentPocket.segmentLayer.data
 
                 akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
@@ -185,6 +190,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
             pass
 
     # send close pocket
+    create_current_pocketID(True)
     send_close(pocketID, clientAddress)
 
     # save the file
@@ -218,7 +224,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
     # ready the file for downloading
     pocketFullSize = fileSize = os.stat(filePath).st_size
     updatedAt = os.path.getmtime(filePath)
-    fStream = open(filePath, "r")
+    fileStream = open(filePath, "r")
 
     singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
     singleSegmentSize = min(SINGLE_SEGMENT_SIZE_LIMIT[1], singleSegmentSize)
@@ -242,8 +248,72 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
 
         # recive the ready ACK from the client
         readyPocket = recv_pocket()
+        ready = readyPocket.basicLayer.pocketSubType == PocketSubType.DownloadReadyForDownloading
 
     # downloading the segments
+    print(readyPocket)
+
+    windowToSend = list(range(segmentsAmount))
+    windowSending = []
+
+    last = time.time()
+
+    downloading = True
+
+    while downloading:
+        now = time.time()
+        if last + windowTimeout > now:
+            # send a segment
+            if len(windowToSend) > 0:
+                segmentID = windowToSend.pop(0)
+                fileStream.seek(segmentID * singleSegmentSize)
+                if segmentID * singleSegmentSize <= fileSize - singleSegmentSize:
+                    # is not the last segment
+                    segment = fileStream.read(singleSegmentSize)
+                else:
+                    # is the last segment
+                    segment = fileStream.read(fileSize - singleSegmentSize)
+
+                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment, PocketSubType.DownloadSegment))
+                segmentPocket.segmentLayer = SegmentLayer(segmentID, segment.encode())
+
+                windowSending.append(segmentID)
+
+                appSocket.sendto(segmentPocket.to_bytes(), clientAddress)
+        else:
+            # refresh window
+            logging.debug("refresh window {}/{}".format(segmentsAmount - len(windowToSend) - len(windowSending), segmentsAmount))
+            timeout = False
+            while not timeout:
+                try:
+                    pocket = recv_pocket()
+                except TimeoutError:
+                    timeout = True
+
+                if not timeout:
+                    if pocket.basicLayer.pocketSubType == PocketSubType.DownloadComplited:
+                        # complit the downloading
+                        timeout = True
+                        downloading = False
+                    elif pocket.akcLayer:
+                        if pocket.akcLayer.segmentID in windowToSend:
+                            windowToSend.remove(pocket.akcLayer.segmentID)
+                        if pocket.akcLayer.segmentID in windowSending:
+                            windowSending.remove(pocket.akcLayer.segmentID)
+
+                        else:
+                            print("Error: get pocket that not ACK and not download complited")
+
+            windowToSend = windowSending + windowToSend
+            windowSending = []
+
+            last = time.time()
+
+
+    fileStream.close()
+
+    # send close pocket
+    send_close(pocketID, clientAddress)
 
 
 if __name__ == "__main__":

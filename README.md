@@ -161,6 +161,10 @@ File Row
 Type: Auth Response Layer
 Sub Type: 10
 
+## Links
+
+* Python Struct: <https://docs.python.org/3.7/library/struct.html>
+
 ## Author
 
 Omer Priel

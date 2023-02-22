@@ -243,7 +243,7 @@ class DownloadResponseLayer:
         offset += errorMessageLength
         fileSize, updatedAt = struct.unpack_from("Ld", data, offset)
 
-        return DownloadResponseLayer(ok, errorMessage, fileSize=fileSize, updatedAt=updatedAt)
+        return DownloadResponseLayer(ok, errorMessage, fileSize, updatedAt)
 
     def __init__(self, ok: bool, errorMessage: str, fileSize: int, updatedAt: float) -> None:
         self.ok = ok
@@ -261,6 +261,8 @@ class DownloadResponseLayer:
        return struct.pack("?b", self.ok, len(self.errorMessage)) + self.errorMessage.encode() + struct.pack("Ld", self.fileSize, self.updatedAt)
 
     def __str__(self) -> str:
+        if not self.ok:
+            return " ok: {}, message: {} |".format(self.ok, self.errorMessage)
         return " ok: {}, message: {}, file-size: {}, updated at: {} |".format(self.ok, self.errorMessage, self.fileSize, time.ctime(self.updatedAt))
 
 

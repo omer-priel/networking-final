@@ -132,11 +132,8 @@ def upload_file(filename: str, destination: str) -> None:
                             windowToSend.remove(pocket.akcLayer.segmentID)
                         if pocket.akcLayer.segmentID in windowSending:
                             windowSending.remove(pocket.akcLayer.segmentID)
-
                         else:
                             print("Error: get pocket that not ACK and not Close")
-                    else:
-                        print("Error: get pocket that has warng pocket ID")
 
             windowToSend = windowSending + windowToSend
             windowSending = []
@@ -156,14 +153,14 @@ def download_file(filePath: str, destination: str):
 
     # remove if need the destination
     # create and remove again destination for checking
-    fStream = open(destination, "a")
-    if not fStream.writable():
+    fileStream = open(destination, "a")
+    if not fileStream.writable():
         print("The file \"{}\" is not writable!".format(destination))
-        fStream.close()
+        fileStream.close()
         os.remove(destination)
         return None
 
-    fStream.close()
+    fileStream.close()
     os.remove(destination)
 
     # send download request
@@ -208,20 +205,63 @@ def download_file(filePath: str, destination: str):
 
     logging.debug("send ready ack pocket: " + str(readyPocket))
 
-    clientSocket.sendto(readyPocket.to_bytes(), appAddress)
+    # send ready pockets until segment comes
+    itFirstSegment = False
+
+    while not itFirstSegment:
+        clientSocket.sendto(readyPocket.to_bytes(), appAddress)
+
+        data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+        segmentPocket = Pocket.from_bytes(data)
+        itFirstSegment =  segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
 
     # handle segments
+    while len(neededSegments) > 0:
+        try:
+            if itFirstSegment:
+                itFirstSegment = False
+            else:
+                data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+                segmentPocket = Pocket.from_bytes(data)
 
-    # send complite ACK knowning the app that the file complited
+            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment):
+                logging.error("Get pocket that is not download segment")
+            else:
+                segmentID = segmentPocket.segmentLayer.segmentID
+                if segmentID in neededSegments:
+                    # add new segment
+                    neededSegments.remove(segmentID)
+                    segments[segmentID] = segmentPocket.segmentLayer.data
 
-    # wait for closeing and sending ACK's in the same time
+                akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
+                akcPocket.akcLayer = AKCLayer(segmentID)
+                clientSocket.sendto(akcPocket.to_bytes(), appAddress)
+        except socket.error:
+            pass
 
-    # close the connection
+    # send complited download pocket to knowning the app that the file complited
+    # until recive close pocket
+    complitedPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.DownloadComplited))
+    complitedPocket.akcLayer = AKCLayer(0)
+
+    closed = False
+
+    while not closed:
+        clientSocket.sendto(complitedPocket.to_bytes(), appAddress)
+
+        data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+        closePocket = Pocket.from_bytes(data)
+        closed =  closePocket.basicLayer.pocketType == PocketType.Close
 
     # create the file
+    fileStream = open(destination, "a")
+    for segment in segments:
+        fileStream.write(segment.decode())
 
     # clean up
-    pass
+    fileStream.close()
+
+    logging.info("The file \"{}\" downloaded to \"{}\".".format(filePath, destination))
 
 
 def send_list_command(directoryPath: str):
