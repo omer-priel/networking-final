@@ -20,8 +20,10 @@ MAX_WINDOW_TIMEOUT = 1  # [s]
 
 def init_app() -> None:
     init_config()
+
+    config.LOGGING_LEVEL = logging.CRITICAL
+
     init_logging()
-    create_socket()
 
     logging.info("The app is initialized")
 
@@ -455,6 +457,7 @@ def main() -> None:
         if not destination:
             destination = os.path.basename(filename)
 
+        create_socket()
         upload_file(filename, destination)
     elif sys.argv[1] == "download":
         if len(sys.argv) == 2:
@@ -467,6 +470,7 @@ def main() -> None:
         filePath = sys.argv[2]
         destination = sys.argv[3]
 
+        create_socket()
         download_file(filePath, destination)
 
     elif sys.argv[1] == "list":
@@ -475,8 +479,8 @@ def main() -> None:
         else:
             directoryPath = sys.argv[2]
 
+        create_socket()
         send_list_command(directoryPath)
-
     else:
         print('The command "{}" not exists'.format(sys.argv[1]))
 
