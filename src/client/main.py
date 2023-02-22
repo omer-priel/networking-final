@@ -7,6 +7,8 @@ import time
 import logging
 import socket
 
+from prettytable import PrettyTable
+
 from src.lib.config import config, init_config, init_logging
 from src.lib.ftp import *
 
@@ -390,12 +392,22 @@ def send_list_command(directoryPath: str):
         i += 1
 
     # print the directory content
-    print("Type | Name | Updated At | Size")
-    for directoryName, updatedAt in directories:
-        print("dir {} {}".format(directoryName, time.ctime(updatedAt)))
-    for fileName, updatedAt, fileSize in files:
-        print("    {} {} {}".format(fileName, time.ctime(updatedAt), fileSize))
+    print_directory_content(files, directories)
 
+
+def print_directory_content(files: list, directories: list) -> None:
+    # create printed table
+    table = PrettyTable()
+
+    table.field_names = ["", "Name", "Updated At", "Size"]
+
+    # print content
+    for directoryName, updatedAt in directories:
+        table.add_row(["dir", directoryName, time.ctime(updatedAt), ""])
+    for fileName, updatedAt, fileSize in files:
+        table.add_row(["", fileName, time.ctime(updatedAt), fileSize])
+
+    print(table)
 
 def print_help():
     # TODO print help command
