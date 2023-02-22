@@ -189,12 +189,10 @@ def download_file(filePath: str, destination: str):
         print("Error: " + resPocket.downloadResponseLayer.errorMessage)
         return None
 
-    # init containers for downloading
+    # init segments for downloading
     pocketID = resPocket.basicLayer.pocketID
 
-    singleSegmentSize = resPocket.authResponseLayer.singleSegmentSize
     segmentsAmount = resPocket.authResponseLayer.segmentsAmount
-    windowTimeout = resPocket.authResponseLayer.windowTimeout
 
     neededSegments = list(range(segmentsAmount))
     segments = [b""] * segmentsAmount
@@ -271,8 +269,132 @@ def download_file(filePath: str, destination: str):
 
 
 def send_list_command(directoryPath: str):
-    # TODO list command
-    pass
+    # send list request
+    appAddress = (config.APP_HOST, config.APP_PORT)
+
+    reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.ListRequest))
+    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
+    reqPocket.listRequestLayer = ListRequestLayer(directoryPath)
+
+    logging.debug("send req pocket: " + str(reqPocket))
+
+    clientSocket.sendto(reqPocket.to_bytes(), appAddress)
+
+    # recive list response
+    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    resPocket = Pocket.from_bytes(data)
+
+    # handle response
+    logging.debug("get res pocket: " + str(resPocket))
+
+    if not resPocket.authResponseLayer or not resPocket.listResponseLayer:
+        print("Error: the list request faild")
+        return None
+
+    if not resPocket.listResponseLayer.ok:
+        print("Error: " + resPocket.listResponseLayer.errorMessage)
+        return None
+
+    if resPocket.listResponseLayer.directoriesCount == 0 and resPocket.listResponseLayer.directoriesCount == 0:
+        print("The directory is empty")
+        return None
+
+    # init segments for downloading
+    pocketID = resPocket.basicLayer.pocketID
+
+    segmentsAmount = resPocket.authResponseLayer.segmentsAmount
+
+    neededSegments = list(range(segmentsAmount))
+    segments = [b""] * segmentsAmount
+
+    # send ack for start downloading
+    readyPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.ListReadyForDownloading))
+    readyPocket.akcLayer = AKCLayer(0)
+
+    logging.debug("send ready ack pocket: " + str(readyPocket))
+
+    # send ready pockets until segment comes
+    itFirstSegment = False
+
+    while not itFirstSegment:
+        clientSocket.sendto(readyPocket.to_bytes(), appAddress)
+
+        try:
+            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+            segmentPocket = Pocket.from_bytes(data)
+            itFirstSegment =  segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment
+        except socket.error:
+            pass
+
+    # handle segments
+    while len(neededSegments) > 0:
+        try:
+            if itFirstSegment:
+                itFirstSegment = False
+            else:
+                data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+                segmentPocket = Pocket.from_bytes(data)
+
+            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment):
+                logging.error("Get pocket that is not list segment")
+            else:
+                segmentID = segmentPocket.segmentLayer.segmentID
+                if segmentID in neededSegments:
+                    # add new segment
+                    neededSegments.remove(segmentID)
+                    segments[segmentID] = segmentPocket.segmentLayer.data
+
+                akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
+                akcPocket.akcLayer = AKCLayer(segmentID)
+                clientSocket.sendto(akcPocket.to_bytes(), appAddress)
+        except socket.error:
+            pass
+
+    # send complited list pocket to knowning the app that the list download complited
+    # until recive close pocket
+    complitedPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.ListComplited))
+    complitedPocket.akcLayer = AKCLayer(0)
+
+    closed = False
+
+    while not closed:
+        clientSocket.sendto(complitedPocket.to_bytes(), appAddress)
+
+        try:
+            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+            closePocket = Pocket.from_bytes(data)
+            closed =  closePocket.basicLayer.pocketType == PocketType.Close
+        except socket.error:
+            pass
+
+    # combain the segments
+    data = b""
+    for segment in segments:
+        data += segment
+
+    # load the directory content
+    directories = []
+    files = []
+
+    i = 0
+    offset = 0
+    while i < resPocket.listResponseLayer.directoriesCount:
+        directoryInfo, offset = unpack_directory_block(data, offset)
+        directories.append(directoryInfo)
+        i += 1
+
+    i = 0
+    while i < resPocket.listResponseLayer.filesCount:
+        fileInfo, offset = unpack_file_block(data, offset)
+        files.append(fileInfo)
+        i += 1
+
+    # print the directory content
+    print("Type | Name | Updated At | Size")
+    for directoryName, updatedAt in directories:
+        print("dir {} {}".format(directoryName, time.ctime(updatedAt)))
+    for fileName, updatedAt, fileSize in files:
+        print("    {} {} {}".format(fileName, time.ctime(updatedAt), fileSize))
 
 
 def print_help():

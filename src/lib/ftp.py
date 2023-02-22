@@ -328,6 +328,42 @@ class ListResponseLayer:
         return " ok: {}, message: {}, directories: {}, files: {} |".format(self.ok, self.errorMessage, self.directoriesCount, self.filesCount)
 
 
+def pack_directory_block(directoryName: str, updatedAt: float) -> bytes:
+    return struct.pack("I", len(directoryName)) + directoryName.encode() + struct.pack("d", updatedAt)
+
+
+def unpack_directory_block(data: bytes, offset: int) -> tuple[tuple[str, float], int]:
+    directoryNameLength = struct.unpack("I", offset)
+    offset += struct.calcsize("I")
+    if directoryNameLength == 0:
+        directoryName = ""
+    else:
+        directoryName = bytes.decode(data[offset:offset + directoryNameLength - 1])
+    offset += directoryNameLength
+    updatedAt = struct.unpack("d", offset)[0]
+    offset += struct.calcsize("d")
+
+    return ((directoryName, updatedAt), offset)
+
+
+def pack_file_block(fileName: str, updatedAt: float, fileSize: int) -> bytes:
+    return struct.pack("I", len(fileName)) + fileName.encode() + struct.pack("dL", updatedAt, fileSize)
+
+
+def unpack_file_block(data: bytes, offset: int) -> tuple[tuple[str, float, int], int]:
+    fileNameLength = struct.unpack("I", offset)
+    offset += struct.calcsize("I")
+    if fileNameLength == 0:
+        fileName = ""
+    else:
+        fileName = bytes.decode(data[offset:offset + fileNameLength - 1])
+    offset += fileNameLength
+    updatedAt, fileSize = struct.unpack("dL", offset)
+    offset += struct.calcsize("dL")
+
+    return ((fileName, updatedAt, fileSize), offset)
+
+
 # A socket pocket
 # with parsing and saving all the layers of the app
 class Pocket:

@@ -160,11 +160,18 @@ Sub Type: 11
 
 ### List Segment Layer
 
-The full combine segments is list of
+The full combine segments is:
+list of directories
 
-| File Name Size |        File Name         | File Size | Updated At |
-|----------------|-------------------------:|----------:|-----------:|
-| 4 Bytes        | (File Name Size) * Bytes | 8 Bytes   | 8 Bytes    |
+| Name Length |         Name          | Updated At |
+|-------------|----------------------:|-----------:|
+| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    |
+
+and list of files
+
+| Name Length |         Name          | Updated At | File Size  |
+|-------------|----------------------:|-----------:|-----------:|
+| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
 Type: Segment Layer
 Sub Type: 12
