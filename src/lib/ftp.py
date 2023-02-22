@@ -204,23 +204,20 @@ class UploadRequestLayer(LayerInterface):
         filePathLength = struct.unpack_from("I", data, offset)[0]
         offset += struct.calcsize("I")
         filePath = data[offset : offset + filePathLength]
-        offset += filePathLength
-        fileSize = struct.unpack_from("L", data, offset)[0]
 
-        return UploadRequestLayer(bytes.decode(filePath), fileSize)
+        return UploadRequestLayer(bytes.decode(filePath))
 
-    def __init__(self, filePath: str, fileSize: int) -> None:
+    def __init__(self, filePath: str) -> None:
         self.path = filePath
-        self.fileSize = fileSize
 
     def length(self) -> int:
-        return struct.calcsize("I") + len(self.path) + struct.calcsize("L")
+        return struct.calcsize("I") + len(self.path)
 
     def to_bytes(self) -> bytes:
-        return struct.pack("I", len(self.path)) + self.path.encode() + struct.pack("L", self.fileSize)
+        return struct.pack("I", len(self.path)) + self.path.encode()
 
     def __str__(self) -> str:
-        return " file path: {}, size: {} |".format(self.path, self.fileSize)
+        return " file path: {} |".format(self.path)
 
 
 class DownloadRequestLayer(LayerInterface):

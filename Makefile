@@ -113,6 +113,18 @@ test-client-upload-not-found:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest ../100.txt
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/abdasda
 
+test-client-upload-user:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent upload uploads/A.md
+
+test-client-upload-user-without-password:
+	PYTHONPATH=. poetry run python src/client/main.py --user bar upload uploads/A.md
+
+test-client-upload-user-multi:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent upload uploads/other/100.txt --dest a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent upload uploads/other/100.txt --dest b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent upload uploads/other/100.txt --dest a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent upload uploads/other/100.txt --dest b/c/100.txt
+
 test-client-download: temp
 	PYTHONPATH=. poetry run python src/client/main.py download A.md ./temp/A.md
 
@@ -158,6 +170,18 @@ test-client-download-not-found:
 	PYTHONPATH=. poetry run python src/client/main.py download ../.env ./temp/.enve
 	PYTHONPATH=. poetry run python src/client/main.py download abdasda ./temp/abdasda
 
+test-client-download-user:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download A.md ./temp/A.md
+
+test-client-download-user-without-password:
+	PYTHONPATH=. poetry run python src/client/main.py --user bar download A.md ./temp/A.md
+
+test-client-download-user-multi:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/b/c/100.txt
+
 test-client-list:
 	PYTHONPATH=. poetry run python src/client/main.py list
 
@@ -179,5 +203,16 @@ test-client-list-range:
 test-client-list-not-found:
 	PYTHONPATH=. poetry run python src/client/main.py list ..
 	PYTHONPATH=. poetry run python src/client/main.py list abdasda
+
+test-client-list-user:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list
+
+test-client-list-user-without-password:
+	PYTHONPATH=. poetry run python src/client/main.py --user bar list
+
+test-client-list-user-multi:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list a
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list b
 
 test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found
