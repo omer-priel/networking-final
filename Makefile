@@ -121,7 +121,7 @@ test-client-download-child-1000: temp
 test-client-download-child-10000: temp
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/10K.txt ./temp/child/10K.txt
 
-test-client-upload-all:
+test-client-download-all:
 	make test-client-download
 	make test-client-download-child
 	make test-client-download-100
