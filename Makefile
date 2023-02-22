@@ -74,17 +74,17 @@ test-client-upload-child:
 test-client-upload-child-100:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest child-dir/100.txt
 
-test-client-upload-multi:
-	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/c/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/c/100.txt
-
 test-client-upload-child-1000:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/1K.txt --dest child-dir/1K.txt
 
 test-client-upload-child-10000:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/10K.txt --dest child-dir/10K.txt
+
+test-client-upload-multi:
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/c/100.txt
 
 test-client-upload-all:
 	make test-client-upload
@@ -121,6 +121,12 @@ test-client-download-child-1000: temp
 test-client-download-child-10000: temp
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/10K.txt ./temp/child/10K.txt
 
+test-client-download-multi:
+	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/b/c/100.txt
+
 test-client-download-all:
 	make test-client-download
 	make test-client-download-child
@@ -130,6 +136,7 @@ test-client-download-all:
 	make test-client-download-child-1000
 	make test-client-download-10000
 	make test-client-download-child-10000
+	make test-client-download-multi
 
 test-client-list:
 	PYTHONPATH=. poetry run python src/client/main.py list
