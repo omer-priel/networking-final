@@ -155,7 +155,7 @@ def download_file(filePath: str, destination: str):
     # create and remove again destination for checking
     fileStream = open(destination, "a")
     if not fileStream.writable():
-        print("The file \"{}\" is not writable!".format(destination))
+        print("Error: The file \"{}\" is not writable!".format(destination))
         fileStream.close()
         os.remove(destination)
         return None
@@ -211,9 +211,12 @@ def download_file(filePath: str, destination: str):
     while not itFirstSegment:
         clientSocket.sendto(readyPocket.to_bytes(), appAddress)
 
-        data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-        segmentPocket = Pocket.from_bytes(data)
-        itFirstSegment =  segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
+        try:
+            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+            segmentPocket = Pocket.from_bytes(data)
+            itFirstSegment =  segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
+        except socket.error:
+            pass
 
     # handle segments
     while len(neededSegments) > 0:
@@ -249,9 +252,12 @@ def download_file(filePath: str, destination: str):
     while not closed:
         clientSocket.sendto(complitedPocket.to_bytes(), appAddress)
 
-        data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-        closePocket = Pocket.from_bytes(data)
-        closed =  closePocket.basicLayer.pocketType == PocketType.Close
+        try:
+            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+            closePocket = Pocket.from_bytes(data)
+            closed =  closePocket.basicLayer.pocketType == PocketType.Close
+        except socket.error:
+            pass
 
     # create the file
     fileStream = open(destination, "a")

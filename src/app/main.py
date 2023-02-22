@@ -251,8 +251,6 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
         ready = readyPocket.basicLayer.pocketSubType == PocketSubType.DownloadReadyForDownloading
 
     # downloading the segments
-    print(readyPocket)
-
     windowToSend = list(range(segmentsAmount))
     windowSending = []
 
@@ -302,7 +300,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
                             windowSending.remove(pocket.akcLayer.segmentID)
 
                         else:
-                            print("Error: get pocket that not ACK and not download complited")
+                            logging.error("Get pocket that not ACK and not download complited")
 
             windowToSend = windowSending + windowToSend
             windowSending = []
