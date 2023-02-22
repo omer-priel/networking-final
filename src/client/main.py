@@ -418,14 +418,17 @@ def print_directory_content(files: list, directories: list) -> None:
 
 
 def print_help():
-    # TODO print help command
-    pass
+    print("client is CLI client for custom app like \"FTP\" based on UDP.")
+    print("\tclient --help - print the help content")
+    print("\tclient upload [--dest <destination>] <file> - upload file")
+    print("\tclient download <remote file> [destination] - download file")
+    print("\tclient list [remote directory] - print directory content")
 
 
 def main() -> None:
     init_app()
 
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 or "--help" in sys.argv[1]:
         print_help()
         return None
 

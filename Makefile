@@ -56,6 +56,9 @@ start-dns:
 	PYTHONPATH=. poetry run python src/dns/main.py
 
 # testing
+test-client-help:
+	PYTHONPATH=. poetry run python src/client/main.py --help
+
 test-client-upload:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/A.md
 
