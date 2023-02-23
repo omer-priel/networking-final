@@ -239,7 +239,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int], sto
             segmentPocket = recv_pocket()
 
             if (not segmentPocket.segmentLayer) or (
-                not segmentPocket.basicLayer.pocketSubType == PocketSubType.UploadSegment
+                not segmentPocket.basicLayer.pocketType == PocketType.Segment
             ):
                 logging.error("Get pocket that is not upload segment")
             else:
@@ -337,7 +337,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int], s
                     # is the last segment
                     segment = fileStream.read(fileSize - singleSegmentSize)
 
-                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment, PocketSubType.DownloadSegment))
+                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment))
                 segmentPocket.segmentLayer = SegmentLayer(segmentID, segment.encode())
 
                 windowSending.append(segmentID)
@@ -474,7 +474,7 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int], stora
                 else:
                     segment = content[segmentID * singleSegmentSize :]
 
-                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment, PocketSubType.ListSegment))
+                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment))
                 segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
 
                 windowSending.append(segmentID)

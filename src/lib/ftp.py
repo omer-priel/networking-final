@@ -23,17 +23,14 @@ class PocketSubType(IntEnum):
     Unknown = 0
     UploadRequest = 1
     UploadResponse = 2
-    UploadSegment = 3
-    DownloadRequest = 4
-    DownloadResponse = 5
-    DownloadReadyForDownloading = 6
-    DownloadSegment = 7
-    DownloadComplited = 8
-    ListRequest = 9
-    ListResponse = 10
-    ListReadyForDownloading = 11
-    ListSegment = 12
-    ListComplited = 13
+    DownloadRequest = 3
+    DownloadResponse = 4
+    DownloadReadyForDownloading = 5
+    DownloadComplited = 6
+    ListRequest = 7
+    ListResponse = 8
+    ListReadyForDownloading = 9
+    ListComplited = 10
 
 # Layer Interface
 class LayerInterface(ABC):

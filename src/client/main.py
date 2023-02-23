@@ -114,7 +114,7 @@ def upload_file(filename: str, destination: str) -> None:
                     # is the last segment
                     segment = fileStream.read(fileSize - singleSegmentSize)
 
-                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment, PocketSubType.UploadSegment))
+                segmentPocket = Pocket(BasicLayer(pocketID, PocketType.Segment))
                 segmentPocket.segmentLayer = SegmentLayer(segmentID, segment.encode())
 
                 windowSending.append(segmentID)
@@ -221,7 +221,7 @@ def download_file(filePath: str, destination: str):
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
             segmentPocket = Pocket.from_bytes(data)
-            itFirstSegment = segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
+            itFirstSegment = segmentPocket.basicLayer.pocketType == PocketType.Segment
         except socket.error:
             pass
 
@@ -235,7 +235,7 @@ def download_file(filePath: str, destination: str):
                 segmentPocket = Pocket.from_bytes(data)
 
             if (not segmentPocket.segmentLayer) or (
-                not segmentPocket.basicLayer.pocketSubType == PocketSubType.DownloadSegment
+                not segmentPocket.basicLayer.pocketType == PocketType.Segment
             ):
                 logging.error("Get pocket that is not download segment")
             else:
@@ -331,7 +331,7 @@ def send_list_command(directoryPath: str):
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
             segmentPocket = Pocket.from_bytes(data)
-            itFirstSegment = segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment
+            itFirstSegment = segmentPocket.basicLayer.pocketType == PocketType.Segment
         except socket.error:
             pass
 
@@ -345,7 +345,7 @@ def send_list_command(directoryPath: str):
                 segmentPocket = Pocket.from_bytes(data)
 
             if (not segmentPocket.segmentLayer) or (
-                not segmentPocket.basicLayer.pocketSubType == PocketSubType.ListSegment
+                not segmentPocket.basicLayer.pocketSubType == PocketType.Segment
             ):
                 logging.error("Get pocket that is not list segment")
             else:

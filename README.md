@@ -95,12 +95,6 @@ Path: path of the file on the server
 Type: Auth Response Layer
 Sub Type: 2
 
-### Upload Response Segment
-
-Type: Segment Layer
-Sub Type: 3
-Data: segment of the file
-
 #### Download Request Layer
 
 | Path Length |         Path          |
@@ -108,7 +102,7 @@ Data: segment of the file
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
-Sub Type: 4
+Sub Type: 3
 Path: path of the file on the server
 
 * Can't download file that dos not exists
@@ -116,23 +110,17 @@ Path: path of the file on the server
 #### Download Response
 
 Type: Auth Response Layer
-Sub Type: 5
+Sub Type: 4
 
 ### Download Ready For Downloading
 
 Type: AKC Layer
-Sub Type: 6
-
-### Download Response Segment
-
-Type: Segment Layer
-Sub Type: 7
-Data: segment of the file
+Sub Type: 5
 
 ### Download Complited
 
 Type: AKC Layer
-Sub Type: 8
+Sub Type: 6
 
 #### List Request Layer
 
@@ -141,7 +129,7 @@ Sub Type: 8
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
-Sub Type: 9
+Sub Type: 7
 Path: path of the directory (folder) on the server
 
 #### List Response Layer
@@ -151,14 +139,7 @@ Path: path of the directory (folder) on the server
 | 8 Bytes            | 8 Bytes      |
 
 Type: Auth Response Layer
-Sub Type: 10
-
-### List Ready For Downloading
-
-Type: AKC Layer
-Sub Type: 11
-
-### List Segment
+Sub Type: 8
 
 The full combine segments is:
 list of directories
@@ -173,13 +154,15 @@ and list of files
 |-------------|-----------------------|------------|------------|
 | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
-Type: Segment Layer
-Sub Type: 12
+### List Ready For Downloading
+
+Type: AKC Layer
+Sub Type: 9
 
 ### List Complited
 
 Type: AKC Layer
-Sub Type: 13
+Sub Type: 10
 
 ## Links
 
