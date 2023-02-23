@@ -9,7 +9,7 @@ import time
 
 from prettytable import PrettyTable
 
-from src.lib.config import config, init_config, init_logging
+from src.lib.config import config, init_logging
 from src.lib.ftp import *
 
 clientSocket: socket.socket
@@ -18,15 +18,17 @@ MAX_SEGMENT_SIZE = 1000  # [byte]
 MAX_WINDOW_TIMEOUT = 1  # [s]
 
 class Options:
-    def __init__(self, anonymous: bool, userName: str, password: str) -> None:
-        self.anonymous = anonymous
-        self.userName = userName
-        self.password = password
+    def __init__(self) -> None:
+        self.clientAddress: tuple[str, int] = ("localhost", 8001)
+        self.appAddress: tuple[str, int] = ("localhost", 8000)
+        self.anonymous = True
+        self.userName = ""
+        self.password = ""
 
+
+options: Options = Options()
 
 def init_app() -> None:
-    init_config()
-
     config.LOGGING_LEVEL = logging.CRITICAL
 
     init_logging()
@@ -40,14 +42,14 @@ def create_socket() -> None:
     clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    clientSocket.bind((config.CLIENT_HOST, config.CLIENT_PORT))
+    clientSocket.bind(options.clientAddress)
     clientSocket.setblocking(1)
     clientSocket.settimeout(config.SOCKET_TIMEOUT)
 
-    print("The client socket initialized on " + config.CLIENT_HOST + ":" + str(config.CLIENT_PORT))
+    print("The client socket initialized on " + options.clientAddress[0] + ":" + str(options.clientAddress[1]))
 
 
-def upload_file(options: Options, filename: str, destination: str) -> None:
+def upload_file(filename: str, destination: str) -> None:
     # load the file info
     if not os.path.isfile(filename):
         print('The file"' + filename + "\" don't exists!")
@@ -58,8 +60,6 @@ def upload_file(options: Options, filename: str, destination: str) -> None:
     fileSize = os.stat(filename).st_size
 
     # create request pocket
-    appAddress = (config.APP_HOST, config.APP_PORT)
-
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.UploadRequest))
     reqPocket.authLayer = AuthLayer(fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination)
@@ -67,7 +67,7 @@ def upload_file(options: Options, filename: str, destination: str) -> None:
     # send request
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(reqPocket.to_bytes(), appAddress)
+    clientSocket.sendto(reqPocket.to_bytes(), options.appAddress)
 
     # recive response
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -119,7 +119,7 @@ def upload_file(options: Options, filename: str, destination: str) -> None:
 
                 windowSending.append(segmentID)
 
-                clientSocket.sendto(segmentPocket.to_bytes(), appAddress)
+                clientSocket.sendto(segmentPocket.to_bytes(), options.appAddress)
         else:
             # refresh window
             logging.debug(
@@ -155,7 +155,7 @@ def upload_file(options: Options, filename: str, destination: str) -> None:
     fileStream.close()
 
 
-def download_file(options: Options, filePath: str, destination: str):
+def download_file(filePath: str, destination: str):
     # check if the directory of destination exists
     if os.path.isfile(destination):
         os.remove(destination)
@@ -175,15 +175,13 @@ def download_file(options: Options, filePath: str, destination: str):
     os.remove(destination)
 
     # send download request
-    appAddress = (config.APP_HOST, config.APP_PORT)
-
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.DownloadRequest))
     reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
 
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(reqPocket.to_bytes(), appAddress)
+    clientSocket.sendto(reqPocket.to_bytes(), options.appAddress)
 
     # recive download response
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -218,7 +216,7 @@ def download_file(options: Options, filePath: str, destination: str):
     itFirstSegment = False
 
     while not itFirstSegment:
-        clientSocket.sendto(readyPocket.to_bytes(), appAddress)
+        clientSocket.sendto(readyPocket.to_bytes(), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -249,7 +247,7 @@ def download_file(options: Options, filePath: str, destination: str):
 
                 akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
-                clientSocket.sendto(akcPocket.to_bytes(), appAddress)
+                clientSocket.sendto(akcPocket.to_bytes(), options.appAddress)
         except socket.error:
             pass
 
@@ -261,7 +259,7 @@ def download_file(options: Options, filePath: str, destination: str):
     closed = False
 
     while not closed:
-        clientSocket.sendto(complitedPocket.to_bytes(), appAddress)
+        clientSocket.sendto(complitedPocket.to_bytes(), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -281,17 +279,15 @@ def download_file(options: Options, filePath: str, destination: str):
     logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
 
 
-def send_list_command(options: Options, directoryPath: str):
+def send_list_command(directoryPath: str):
     # send list request
-    appAddress = (config.APP_HOST, config.APP_PORT)
-
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.ListRequest))
     reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.listRequestLayer = ListRequestLayer(directoryPath)
 
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(reqPocket.to_bytes(), appAddress)
+    clientSocket.sendto(reqPocket.to_bytes(), options.appAddress)
 
     # recive list response
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -330,7 +326,7 @@ def send_list_command(options: Options, directoryPath: str):
     itFirstSegment = False
 
     while not itFirstSegment:
-        clientSocket.sendto(readyPocket.to_bytes(), appAddress)
+        clientSocket.sendto(readyPocket.to_bytes(), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -361,7 +357,7 @@ def send_list_command(options: Options, directoryPath: str):
 
                 akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
-                clientSocket.sendto(akcPocket.to_bytes(), appAddress)
+                clientSocket.sendto(akcPocket.to_bytes(), options.appAddress)
         except socket.error:
             pass
 
@@ -373,7 +369,7 @@ def send_list_command(options: Options, directoryPath: str):
     closed = False
 
     while not closed:
-        clientSocket.sendto(complitedPocket.to_bytes(), appAddress)
+        clientSocket.sendto(complitedPocket.to_bytes(), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -432,15 +428,19 @@ def print_help():
     print("Options:")
     print("--user <user name>    - set user name")
     print("--password <password> - set user password, require --user")
+    print("--host <host> - set the server host address, defualt: localhost")
+    print("--port <port> - set the server port, defualt: 8000")
+    print("--client-host <host> - set the client host address, defualt: localhost")
+    print("--client-port <port> - set the client port, defualt: 8001")
 
 def main() -> None:
+    global options
+
     init_app()
 
     if len(sys.argv) < 2 or "--help" in sys.argv:
         print_help()
         return None
-
-    options = Options(True, "", "")
 
     i = 1
 
@@ -459,6 +459,34 @@ def main() -> None:
                 return None
             else:
                 options.password = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--host":
+            if i + 1 == len(sys.argv):
+                print("Host address is missing")
+                return None
+            else:
+                options.appAddress[0] = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--port":
+            if i + 1 == len(sys.argv):
+                print("Port address is missing")
+                return None
+            else:
+                options.appAddress[1] = int(sys.argv[i + 1])
+            i += 2
+        elif sys.argv[i] == "--client-host":
+            if i + 1 == len(sys.argv):
+                print("Host address is missing")
+                return None
+            else:
+                options.clientAddress[0] = sys.argv[i + 1]
+            i += 2
+        elif sys.argv[i] == "--client-port":
+            if i + 1 == len(sys.argv):
+                print("Port address is missing")
+                return None
+            else:
+                options.clientAddress[1] = int(sys.argv[i + 1])
             i += 2
         else:
             print("The option {} dose not exists!".format(sys.argv[i]))
@@ -496,7 +524,7 @@ def main() -> None:
             destination = os.path.basename(filename)
 
         create_socket()
-        upload_file(options, filename, destination)
+        upload_file(filename, destination)
     elif sys.argv[i] == "download":
         if len(sys.argv) == i + 1:
             print("File path and destination path are Missing!")
@@ -509,7 +537,7 @@ def main() -> None:
         destination = sys.argv[i + 2]
 
         create_socket()
-        download_file(options, filePath, destination)
+        download_file(filePath, destination)
 
     elif sys.argv[i] == "list":
         if len(sys.argv) == i + 1:
@@ -518,7 +546,7 @@ def main() -> None:
             directoryPath = sys.argv[i + 1]
 
         create_socket()
-        send_list_command(options, directoryPath)
+        send_list_command(directoryPath)
     else:
         print('The command "{}" not exists'.format(sys.argv[i]))
 

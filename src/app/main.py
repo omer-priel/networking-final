@@ -9,16 +9,8 @@ import json
 import uuid
 from pydantic import BaseModel
 
-from src.lib.config import config, init_config, init_logging
+from src.app.config import config, init_config, init_logging
 from src.lib.ftp import *
-
-# config
-STORAGE_PUBLIC = "/public"
-STORAGE_PRIVATE = "/private"
-STORAGE_DATA = "/data.json"
-
-SINGLE_SEGMENT_SIZE_LIMIT = (10, 1500)  # [byte]
-WINDOW_TIMEOUT_LIMIT = (0.1, 1)  # [s]
 
 
 class UserData(BaseModel):
@@ -52,15 +44,15 @@ def init_strorage():
     if not os.path.isdir(config.APP_STORAGE_PATH):
         os.mkdir(config.APP_STORAGE_PATH)
 
-    if not os.path.isdir(config.APP_STORAGE_PATH + STORAGE_PUBLIC):
-        os.mkdir(config.APP_STORAGE_PATH + STORAGE_PUBLIC)
+    if not os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PUBLIC):
+        os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PUBLIC)
 
-    if not os.path.isdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE):
-        os.mkdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE)
+    if not os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE):
+        os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE)
 
-    if not os.path.isfile(config.APP_STORAGE_PATH + STORAGE_DATA):
+    if not os.path.isfile(config.APP_STORAGE_PATH + config.STORAGE_DATA):
         storageData = StorageData()
-        with open(config.APP_STORAGE_PATH + STORAGE_DATA, "a") as outputFile:
+        with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "a") as outputFile:
             outputFile.write(storageData.json())
 
 
@@ -138,7 +130,7 @@ def recv_pocket() -> Pocket:
 
 # controllers
 def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
-    storagePath = config.APP_STORAGE_PATH + STORAGE_PUBLIC + "/"
+    storagePath = config.APP_STORAGE_PATH + config.STORAGE_PUBLIC + "/"
 
     if not reqPocket.authLayer.anonymous:
         # valid user
@@ -146,7 +138,7 @@ def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
         if reqPocket.authLayer.userName == "":
             errorMessage = "The user name cannot be empty"
         else:
-            with open(config.APP_STORAGE_PATH + STORAGE_DATA, "r") as dataFile:
+            with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "r") as dataFile:
                 storageData = StorageData(**json.load(dataFile))
 
         if not errorMessage:
@@ -158,13 +150,13 @@ def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
                     errorMessage == "the password is incorrect"
             else:
                 userData = UserData(id=str(uuid.uuid4()), password=reqPocket.authLayer.password)
-                while os.path.isdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE + "/" + userData.id):
+                while os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id):
                     userData.id = str(uuid.uuid4())
 
-                os.mkdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE + "/" + userData.id)
+                os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id)
                 storageData.users[reqPocket.authLayer.userName] = userData
 
-                with open(config.APP_STORAGE_PATH + STORAGE_DATA, "w") as dataFile:
+                with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "w") as dataFile:
                     dataFile.write(storageData.json())
 
         if errorMessage:
@@ -174,7 +166,7 @@ def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
             appSocket.sendto(resPocket.to_bytes(), clientAddress)
             return None
 
-        storagePath = config.APP_STORAGE_PATH + STORAGE_PRIVATE + "/" + userData.id  + "/"
+        storagePath = config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id  + "/"
 
     if reqPocket.basicLayer.pocketSubType == PocketSubType.UploadRequest:
         handle_upload_request(reqPocket, clientAddress, storagePath)
@@ -221,15 +213,15 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int], sto
     fileStream = open(filePath, "w")
 
     # split to segments info
-    singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
-    singleSegmentSize = min(SINGLE_SEGMENT_SIZE_LIMIT[1], singleSegmentSize)
+    singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, reqPocket.authLayer.maxSingleSegmentSize)
+    singleSegmentSize = min(config.SINGLE_SEGMENT_SIZE_MAX, singleSegmentSize)
 
     segmentsAmount = int(fileSize / singleSegmentSize)
     if segmentsAmount * singleSegmentSize < fileSize:
         segmentsAmount += 1
 
-    windowTimeout = max(WINDOW_TIMEOUT_LIMIT[0], reqPocket.authLayer.maxWindowTimeout)
-    windowTimeout = min(WINDOW_TIMEOUT_LIMIT[1], windowTimeout)
+    windowTimeout = max(config.WINDOW_TIMEOUT_MIN, reqPocket.authLayer.maxWindowTimeout)
+    windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
 
     # init the window
     neededSegments = list(range(segmentsAmount))
@@ -300,15 +292,15 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int], s
     fileSize = os.stat(filePath).st_size
     fileStream = open(filePath, "r")
 
-    singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
-    singleSegmentSize = min(SINGLE_SEGMENT_SIZE_LIMIT[1], singleSegmentSize)
+    singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, reqPocket.authLayer.maxSingleSegmentSize)
+    singleSegmentSize = min(config.SINGLE_SEGMENT_SIZE_MAX, singleSegmentSize)
 
     segmentsAmount = int(fileSize / singleSegmentSize)
     if segmentsAmount * singleSegmentSize < fileSize:
         segmentsAmount += 1
 
-    windowTimeout = max(WINDOW_TIMEOUT_LIMIT[0], reqPocket.authLayer.maxWindowTimeout)
-    windowTimeout = min(WINDOW_TIMEOUT_LIMIT[1], windowTimeout)
+    windowTimeout = max(config.WINDOW_TIMEOUT_MIN, reqPocket.authLayer.maxWindowTimeout)
+    windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
 
     # send the download respose
     pocketID = create_current_pocketID()
@@ -438,15 +430,15 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int], stora
     # ready the content for downloading
     contentSize = len(content)
 
-    singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
-    singleSegmentSize = min(SINGLE_SEGMENT_SIZE_LIMIT[1], singleSegmentSize)
+    singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, reqPocket.authLayer.maxSingleSegmentSize)
+    singleSegmentSize = min(config.SINGLE_SEGMENT_SIZE_MAX, singleSegmentSize)
 
     segmentsAmount = int(contentSize / singleSegmentSize)
     if segmentsAmount * singleSegmentSize < contentSize:
         segmentsAmount += 1
 
-    windowTimeout = max(WINDOW_TIMEOUT_LIMIT[0], reqPocket.authLayer.maxWindowTimeout)
-    windowTimeout = min(WINDOW_TIMEOUT_LIMIT[1], windowTimeout)
+    windowTimeout = max(config.WINDOW_TIMEOUT_MIN, reqPocket.authLayer.maxWindowTimeout)
+    windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
 
     # send the list respose
     pocketID = create_current_pocketID()
