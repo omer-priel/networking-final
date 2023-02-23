@@ -5,14 +5,29 @@ import os
 import os.path
 import socket
 from typing import Any
+import json
+import uuid
+from pydantic import BaseModel
 
 from src.lib.config import config, init_config, init_logging
 from src.lib.ftp import *
 
 # config
+STORAGE_PUBLIC = "/public"
+STORAGE_PRIVATE = "/private"
+STORAGE_DATA = "/data.json"
 
 SINGLE_SEGMENT_SIZE_LIMIT = (10, 1500)  # [byte]
 WINDOW_TIMEOUT_LIMIT = (0.1, 1)  # [s]
+
+
+class UserData(BaseModel):
+    id: str
+    password: str
+
+
+class StorageData(BaseModel):
+    users: dict[str, UserData] = {}
 
 
 # globals
@@ -37,13 +52,24 @@ def init_strorage():
     if not os.path.isdir(config.APP_STORAGE_PATH):
         os.mkdir(config.APP_STORAGE_PATH)
 
+    if not os.path.isdir(config.APP_STORAGE_PATH + STORAGE_PUBLIC):
+        os.mkdir(config.APP_STORAGE_PATH + STORAGE_PUBLIC)
 
-def get_path(filePath: str) -> str:
-    return config.APP_STORAGE_PATH + "/" + filePath
+    if not os.path.isdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE):
+        os.mkdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE)
+
+    if not os.path.isfile(config.APP_STORAGE_PATH + STORAGE_DATA):
+        storageData = StorageData()
+        with open(config.APP_STORAGE_PATH + STORAGE_DATA, "a") as outputFile:
+            outputFile.write(storageData.json())
 
 
-def in_storage(path: str):
-    return os.path.commonpath([os.path.abspath(path), os.path.abspath(config.APP_STORAGE_PATH)]) == os.path.abspath(config.APP_STORAGE_PATH)
+def get_path(filePath: str, storagePath: str) -> str:
+    return storagePath + filePath
+
+
+def in_storage(path: str, storagePath: str):
+    return os.path.commonpath([os.path.abspath(get_path(path, storagePath)), os.path.abspath(storagePath)]) == os.path.abspath(storagePath)
 
 
 def create_socket() -> None:
@@ -112,36 +138,75 @@ def recv_pocket() -> Pocket:
 
 # controllers
 def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
+    storagePath = config.APP_STORAGE_PATH + STORAGE_PUBLIC + "/"
+
+    if not reqPocket.authLayer.anonymous:
+        # valid user
+        errorMessage: str | None = None
+        if reqPocket.authLayer.userName == "":
+            errorMessage = "The user name cannot be empty"
+        else:
+            with open(config.APP_STORAGE_PATH + STORAGE_DATA, "r") as dataFile:
+                storageData = StorageData(**json.load(dataFile))
+
+        if not errorMessage:
+            # check if the user not exists
+            userData = storageData.users.get(reqPocket.authLayer.userName)
+
+            if userData:
+                if not userData.password == reqPocket.authLayer.password:
+                    errorMessage == "the password is incorrect"
+            else:
+                userData = UserData(id=str(uuid.uuid4()), password=reqPocket.authLayer.password)
+                while os.path.isdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE + "/" + userData.id):
+                    userData.id = str(uuid.uuid4())
+
+                os.mkdir(config.APP_STORAGE_PATH + STORAGE_PRIVATE + "/" + userData.id)
+                storageData.users[reqPocket.authLayer.userName] = userData
+
+                with open(config.APP_STORAGE_PATH + STORAGE_DATA, "w") as dataFile:
+                    dataFile.write(storageData.json())
+
+        if errorMessage:
+            logging.error(errorMessage)
+            resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse))
+            resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, 0, 0, 0)
+            appSocket.sendto(resPocket.to_bytes(), clientAddress)
+            return None
+
+        storagePath = config.APP_STORAGE_PATH + STORAGE_PRIVATE + "/" + userData.id  + "/"
+
     if reqPocket.basicLayer.pocketSubType == PocketSubType.UploadRequest:
-        handle_upload_request(reqPocket, clientAddress)
+        handle_upload_request(reqPocket, clientAddress, storagePath)
     elif reqPocket.basicLayer.pocketSubType == PocketSubType.DownloadRequest:
-        handle_download_request(reqPocket, clientAddress)
+        handle_download_request(reqPocket, clientAddress, storagePath)
     elif reqPocket.basicLayer.pocketSubType == PocketSubType.ListRequest:
-        handle_list_request(reqPocket, clientAddress)
+        handle_list_request(reqPocket, clientAddress, storagePath)
 
 
-def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
+def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
     # valid pocket
     errorMessage: str | None = None
     if not reqPocket.uploadRequestLayer:
         errorMessage = "This is not upload request"
     elif len(reqPocket.uploadRequestLayer.path) > config.FILE_PATH_MAX_LENGTH:
         errorMessage = "The file path cannot be more then {} chars".format(config.FILE_PATH_MAX_LENGTH)
-    elif reqPocket.uploadRequestLayer.fileSize <= 0:
+    elif reqPocket.authLayer.pocketFullSize <= 0:
         errorMessage = "The file cannot be empty"
-    elif not in_storage(reqPocket.uploadRequestLayer.path):
+    elif not in_storage(reqPocket.uploadRequestLayer.path, storagePath):
             errorMessage = "The path {} is not legal".format(reqPocket.uploadRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
         resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.UploadResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
-        resPocket.uploadResponseLayer = UploadResponseLayer(False, errorMessage)
+        resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, 0, 0, 0)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
         return None
 
+    fileSize = reqPocket.authLayer.pocketFullSize
+
     # create the file
-    filePath = get_path(reqPocket.uploadRequestLayer.path)
+    filePath = get_path(reqPocket.uploadRequestLayer.path, storagePath)
     directoyPath = os.path.dirname(filePath)
 
     # delete the file if already exists
@@ -159,8 +224,8 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
     singleSegmentSize = min(SINGLE_SEGMENT_SIZE_LIMIT[1], singleSegmentSize)
 
-    segmentsAmount = int(reqPocket.uploadRequestLayer.fileSize / singleSegmentSize)
-    if segmentsAmount * singleSegmentSize < reqPocket.uploadRequestLayer.fileSize:
+    segmentsAmount = int(fileSize / singleSegmentSize)
+    if segmentsAmount * singleSegmentSize < fileSize:
         segmentsAmount += 1
 
     windowTimeout = max(WINDOW_TIMEOUT_LIMIT[0], reqPocket.authLayer.maxWindowTimeout)
@@ -173,8 +238,7 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     # send auth respose pocket
     pocketID = create_current_pocketID()
     resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.UploadResponse))
-    resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
-    resPocket.uploadResponseLayer = UploadResponseLayer(True, "")
+    resPocket.authResponseLayer = AuthResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
     appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
     # recv segments
@@ -213,29 +277,27 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> 
     logging.info('The file "{}" uploaded'.format(reqPocket.uploadRequestLayer.path))
 
 
-def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
+def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
     # valid pocket
     errorMessage: str | None = None
     if not reqPocket.downloadRequestLayer:
         errorMessage = "This is not download request"
 
-    filePath = get_path(reqPocket.downloadRequestLayer.path)
+    filePath = get_path(reqPocket.downloadRequestLayer.path, storagePath)
     if not os.path.isfile(filePath):
         errorMessage = 'The file "{}" dos not exists!'.format(reqPocket.downloadRequestLayer.path)
-    elif not in_storage(reqPocket.downloadRequestLayer.path):
+    elif not in_storage(reqPocket.downloadRequestLayer.path, storagePath):
         errorMessage = 'The file "{}" dos not exists!'.format(reqPocket.downloadRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
         resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.DownloadResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
-        resPocket.downloadResponseLayer = DownloadResponseLayer(False, errorMessage, 0, 0.0)
+        resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, 0, 0, 0)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
         return None
 
     # ready the file for downloading
     fileSize = os.stat(filePath).st_size
-    updatedAt = os.path.getmtime(filePath)
     fileStream = open(filePath, "r")
 
     singleSegmentSize = max(SINGLE_SEGMENT_SIZE_LIMIT[0], reqPocket.authLayer.maxSingleSegmentSize)
@@ -254,8 +316,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
     ready = False
     while not ready:
         resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.DownloadResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
-        resPocket.downloadResponseLayer = DownloadResponseLayer(True, "", fileSize, updatedAt)
+        resPocket.authResponseLayer = AuthResponseLayer(True, errorMessage, segmentsAmount, singleSegmentSize, windowTimeout)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
         # recive the ready ACK from the client
@@ -327,23 +388,22 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -
     send_close(pocketID, clientAddress)
 
 
-def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
+def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
     # valid pocket
     errorMessage: str | None = None
     if not reqPocket.listRequestLayer:
         errorMessage = "This is not list request"
 
-    directoryPath = get_path(reqPocket.listRequestLayer.path)
+    directoryPath = get_path(reqPocket.listRequestLayer.path, storagePath)
     if not os.path.isdir(directoryPath):
         errorMessage = 'The directory "{}" dos not exists!'.format(reqPocket.listRequestLayer.path)
-    elif not in_storage(reqPocket.listRequestLayer.path):
+    elif not in_storage(reqPocket.listRequestLayer.path, storagePath):
         errorMessage = 'The directory "{}" dos not exists!'.format(reqPocket.listRequestLayer.path)
 
     if errorMessage:
         logging.error(errorMessage)
         resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.ListResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
-        resPocket.listResponseLayer = ListResponseLayer(False, errorMessage, 0, 0)
+        resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, 0, 0, 0)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
         return None
 
@@ -354,8 +414,7 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
     # check if exist directories or files
     if len(directories) == 0 and len(files) == 0:
         resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.ListResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(0, 0, 0)
-        resPocket.listResponseLayer = ListResponseLayer(True, "", 0, 0)
+        resPocket.authResponseLayer = AuthResponseLayer(True, "", 0, 0, 0)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
         return None
 
@@ -395,8 +454,8 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> No
     ready = False
     while not ready:
         resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.ListResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(segmentsAmount, singleSegmentSize, windowTimeout)
-        resPocket.listResponseLayer = ListResponseLayer(True, "", len(directories), len(files))
+        resPocket.authResponseLayer = AuthResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
+        resPocket.listResponseLayer = ListResponseLayer(len(directories), len(files))
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
         # recive the ready ACK from the client

@@ -34,11 +34,17 @@ Every Request / Response are made from Base Layer and the content layer
 | Full Pocket Size | Max Single Segment Size | Max Window Timeout |
 |------------------|:-----------------------:|:------------------:|
 | 8 Bytes          | 8 Bytes                 | 8 Bytes            |
+| Anonymous | User Name Length |         User Name          | Password Length |         Password           |
+|-----------|:----------------:|:--------------------------:|:---------------:|---------------------------:|
+| 1 Byte    | 4 Bytes          | (User Name Length) * Bytes | 4 Bytes         | (User Name Length) * Bytes |
 
 Type: 1
 
 #### Auth Response Layer
 
+| OK      | Error Message Length |         Error Message          |
+|---------|:--------------------:|-------------------------------:|
+| 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes |
 | Segments Amount | Single Segment Size | Window Timeout |
 |-----------------|:-------------------:|:--------------:|
 | 8 Bytes         | 8 Bytes             | 8 Bytes        |
@@ -49,9 +55,9 @@ Type: 2
 
 #### Segment Layer
 
-| Segment ID |   Segment Length    |         Data         |
-|------------|--------------------:|---------------------:|
-| 8 Bytes    | 8 Bytes             | Segment Size * Bytes |
+| Segment ID | Segment Size |         Data         |
+|------------|-------------:|---------------------:|
+| 8 Bytes    | 8 Bytes      | Segment Size * Bytes |
 
 Type: 3
 
@@ -71,9 +77,9 @@ Type: 5
 
 #### Upload Request Layer
 
-| Path Length |         Path          | File Size |
-|-------------|----------------------:|----------:|
-| 4 Bytes     | (Path Length) * Bytes | 8 Bytes   |
+| Path Length |         Path          |
+|-------------|----------------------:|
+| 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
 Sub Type: 1
@@ -82,11 +88,7 @@ Path: path of the file on the server
 * If the file exists, delete it
 * Create the file
 
-#### Upload Response Layer
-
-| OK      | Error Message Length |         Error Message          |
-|---------|---------------------:|-------------------------------:|
-| 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes |
+#### Upload Response
 
 Type: Auth Response Layer
 Sub Type: 2
@@ -109,11 +111,7 @@ Path: path of the file on the server
 
 * Can't download file that dos not exists
 
-#### Download Response Layer
-
-| OK      | Error Message Length |         Error Message          | File Size | Updated At |
-|---------|---------------------:|-------------------------------:|----------:|-----------:|
-| 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes | 8 Bytes   | 8 Bytes    |
+#### Download Response
 
 Type: Auth Response Layer
 Sub Type: 5
@@ -146,9 +144,9 @@ Path: path of the directory (folder) on the server
 
 #### List Response Layer
 
-| OK      | Error Message Length |  Directories Count |  Files Count |
-|---------|---------------------:|-------------------:|-------------:|
-| 1 Bytes | 1 Bytes              | 8 Bytes            | 8 Bytes      |
+|  Directories Count |  Files Count |
+|--------------------|-------------:|
+| 8 Bytes            | 8 Bytes      |
 
 Type: Auth Response Layer
 Sub Type: 10
@@ -158,7 +156,7 @@ Sub Type: 10
 Type: AKC Layer
 Sub Type: 11
 
-### List Segment Layer
+### List Segment
 
 The full combine segments is:
 list of directories

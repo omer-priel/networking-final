@@ -17,6 +17,12 @@ clientSocket: socket.socket
 MAX_SEGMENT_SIZE = 1000  # [byte]
 MAX_WINDOW_TIMEOUT = 1  # [s]
 
+class Options:
+    def __init__(self, anonymous: bool, userName: str, password: str) -> None:
+        self.anonymous = anonymous
+        self.userName = userName
+        self.password = password
+
 
 def init_app() -> None:
     init_config()
@@ -41,7 +47,7 @@ def create_socket() -> None:
     print("The client socket initialized on " + config.CLIENT_HOST + ":" + str(config.CLIENT_PORT))
 
 
-def upload_file(filename: str, destination: str) -> None:
+def upload_file(options: Options, filename: str, destination: str) -> None:
     # load the file info
     if not os.path.isfile(filename):
         print('The file"' + filename + "\" don't exists!")
@@ -52,12 +58,11 @@ def upload_file(filename: str, destination: str) -> None:
     fileSize = os.stat(filename).st_size
 
     # create request pocket
-
     appAddress = (config.APP_HOST, config.APP_PORT)
 
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.UploadRequest))
-    reqPocket.authLayer = AuthLayer(fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
-    reqPocket.uploadRequestLayer = UploadRequestLayer(destination, fileSize)
+    reqPocket.authLayer = AuthLayer(fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
+    reqPocket.uploadRequestLayer = UploadRequestLayer(destination)
 
     # send request
     logging.debug("send req pocket: " + str(reqPocket))
@@ -65,20 +70,19 @@ def upload_file(filename: str, destination: str) -> None:
     clientSocket.sendto(reqPocket.to_bytes(), appAddress)
 
     # recive response
-
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
     resPocket = Pocket.from_bytes(data)
 
     # handle response
     logging.debug("get res pocket: " + str(resPocket))
 
-    if not resPocket.authResponseLayer or not resPocket.uploadResponseLayer:
+    if not resPocket.authResponseLayer:
         print("Error: faild to send the file")
         fileStream.close()
         return None
 
-    if not resPocket.uploadResponseLayer.ok:
-        print("Error: " + resPocket.uploadResponseLayer.errorMessage)
+    if not resPocket.authResponseLayer.ok:
+        print("Error: " + resPocket.authResponseLayer.errorMessage)
         fileStream.close()
         return None
 
@@ -151,7 +155,7 @@ def upload_file(filename: str, destination: str) -> None:
     fileStream.close()
 
 
-def download_file(filePath: str, destination: str):
+def download_file(options: Options, filePath: str, destination: str):
     # check if the directory of destination exists
     if os.path.isfile(destination):
         os.remove(destination)
@@ -174,7 +178,7 @@ def download_file(filePath: str, destination: str):
     appAddress = (config.APP_HOST, config.APP_PORT)
 
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.DownloadRequest))
-    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
+    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -188,12 +192,12 @@ def download_file(filePath: str, destination: str):
     # handel response
     logging.debug("get res pocket: " + str(resPocket))
 
-    if not resPocket.authResponseLayer or not resPocket.downloadResponseLayer:
+    if not resPocket.authResponseLayer:
         print("Error: faild to download the file")
         return None
 
-    if not resPocket.downloadResponseLayer.ok:
-        print("Error: " + resPocket.downloadResponseLayer.errorMessage)
+    if not resPocket.authResponseLayer.ok:
+        print("Error: " + resPocket.authResponseLayer.errorMessage)
         return None
 
     # init segments for downloading
@@ -277,12 +281,12 @@ def download_file(filePath: str, destination: str):
     logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
 
 
-def send_list_command(directoryPath: str):
+def send_list_command(options: Options, directoryPath: str):
     # send list request
     appAddress = (config.APP_HOST, config.APP_PORT)
 
     reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.ListRequest))
-    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT)
+    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.listRequestLayer = ListRequestLayer(directoryPath)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -300,11 +304,11 @@ def send_list_command(directoryPath: str):
         print("Error: the list request faild")
         return None
 
-    if not resPocket.listResponseLayer.ok:
-        print("Error: " + resPocket.listResponseLayer.errorMessage)
+    if not resPocket.authResponseLayer.ok:
+        print("Error: " + resPocket.authResponseLayer.errorMessage)
         return None
 
-    if resPocket.listResponseLayer.directoriesCount == 0 and resPocket.listResponseLayer.directoriesCount == 0:
+    if resPocket.listResponseLayer.directoriesCount == 0 and resPocket.listResponseLayer.filesCount == 0:
         print("The directory is empty")
         return None
 
@@ -422,23 +426,57 @@ def print_directory_content(files: list, directories: list) -> None:
 def print_help():
     print("client is CLI client for custom app like \"FTP\" based on UDP.")
     print("  client --help                               - print the help content")
-    print("  client upload [--dest <destination>] <file> - upload file")
-    print("  client download <remote file> [destination] - download file")
-    print("  client list [remote directory]              - print directory content")
-
+    print("  client [options] upload [--dest <destination>] <file> - upload file")
+    print("  client [options] download <remote file> [destination] - download file")
+    print("  client [options] list [remote directory]              - print directory content")
+    print("Options:")
+    print("--user <user name>    - set user name")
+    print("--password <password> - set user password, require --user")
 
 def main() -> None:
     init_app()
 
-    if len(sys.argv) < 2 or "--help" in sys.argv[1]:
+    if len(sys.argv) < 2 or "--help" in sys.argv:
         print_help()
         return None
 
-    if sys.argv[1] == "upload":
+    options = Options(True, "", "")
+
+    i = 1
+
+    while i < len(sys.argv) and sys.argv[i].startswith("--"):
+        if sys.argv[i] == "--user":
+            if i + 1 == len(sys.argv):
+                print("User Name is missing")
+                return None
+            else:
+                options.userName = sys.argv[i + 1]
+                options.anonymous = False
+            i += 2
+        elif sys.argv[i] == "--password":
+            if i + 1 == len(sys.argv):
+                print("Password is missing")
+                return None
+            else:
+                options.password = sys.argv[i + 1]
+            i += 2
+        else:
+            print("The option {} dose not exists!".format(sys.argv[i]))
+            return None
+
+    if options.password != "" and options.userName == "":
+        print("The --password need User Name!")
+        return None
+
+    if i == len(sys.argv):
+        print("Not found any command")
+        return None
+
+    if sys.argv[i] == "upload":
         filename = None
         destination = None
 
-        i = 2
+        i += 1
         while i < len(sys.argv):
             if sys.argv[i] == "--dest":
                 if i == len(sys.argv) - 1:
@@ -458,31 +496,31 @@ def main() -> None:
             destination = os.path.basename(filename)
 
         create_socket()
-        upload_file(filename, destination)
-    elif sys.argv[1] == "download":
-        if len(sys.argv) == 2:
+        upload_file(options, filename, destination)
+    elif sys.argv[i] == "download":
+        if len(sys.argv) == i + 1:
             print("File path and destination path are Missing!")
             return None
-        if len(sys.argv) == 3:
+        if len(sys.argv) == i + 2:
             print("Destination path are Missing!")
             return None
 
-        filePath = sys.argv[2]
-        destination = sys.argv[3]
+        filePath = sys.argv[i + 1]
+        destination = sys.argv[i + 2]
 
         create_socket()
-        download_file(filePath, destination)
+        download_file(options, filePath, destination)
 
-    elif sys.argv[1] == "list":
-        if len(sys.argv) == 2:
+    elif sys.argv[i] == "list":
+        if len(sys.argv) == i + 1:
             directoryPath = "."
         else:
-            directoryPath = sys.argv[2]
+            directoryPath = sys.argv[i + 1]
 
         create_socket()
-        send_list_command(directoryPath)
+        send_list_command(options, directoryPath)
     else:
-        print('The command "{}" not exists'.format(sys.argv[1]))
+        print('The command "{}" not exists'.format(sys.argv[i]))
 
 
 if __name__ == "__main__":
