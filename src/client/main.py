@@ -465,28 +465,28 @@ def main() -> None:
                 print("Host address is missing")
                 return None
             else:
-                options.appAddress[0] = sys.argv[i + 1]
+                options.appAddress = (sys.argv[i + 1], options.appAddress[1])
             i += 2
         elif sys.argv[i] == "--port":
             if i + 1 == len(sys.argv):
                 print("Port address is missing")
                 return None
             else:
-                options.appAddress[1] = int(sys.argv[i + 1])
+                options.appAddress = (options.appAddress[0], int(sys.argv[i + 1]))
             i += 2
         elif sys.argv[i] == "--client-host":
             if i + 1 == len(sys.argv):
                 print("Host address is missing")
                 return None
             else:
-                options.clientAddress[0] = sys.argv[i + 1]
+                options.clientAddress = (sys.argv[i + 1], options.clientAddress[1])
             i += 2
         elif sys.argv[i] == "--client-port":
             if i + 1 == len(sys.argv):
                 print("Port address is missing")
                 return None
             else:
-                options.clientAddress[1] = int(sys.argv[i + 1])
+                options.clientAddress = (options.clientAddress[0], int(sys.argv[i + 1]))
             i += 2
         else:
             print("The option {} dose not exists!".format(sys.argv[i]))
