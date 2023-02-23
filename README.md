@@ -23,7 +23,7 @@ Every Request / Response are made from Base Layer and the content layer
 #### Basic Layer
 
 |   Type  |  Sub Type  | Packet ID |
-|---------|:-----------|:---------:|
+|---------|------------|-----------|
 | 1 Bytes | 1 Bytes    | 8 Bytes   |
 
 * Type:     type of RUDP layer
@@ -32,10 +32,11 @@ Every Request / Response are made from Base Layer and the content layer
 #### Auth Layer
 
 | Full Pocket Size | Max Single Segment Size | Max Window Timeout |
-|------------------|:-----------------------:|:------------------:|
+|------------------|-------------------------|--------------------|
 | 8 Bytes          | 8 Bytes                 | 8 Bytes            |
+
 | Anonymous | User Name Length |         User Name          | Password Length |         Password           |
-|-----------|:----------------:|:--------------------------:|:---------------:|---------------------------:|
+|-----------|------------------|----------------------------|-----------------|----------------------------|
 | 1 Byte    | 4 Bytes          | (User Name Length) * Bytes | 4 Bytes         | (User Name Length) * Bytes |
 
 Type: 1
@@ -43,10 +44,11 @@ Type: 1
 #### Auth Response Layer
 
 | OK      | Error Message Length |         Error Message          |
-|---------|:--------------------:|-------------------------------:|
+|---------|----------------------|--------------------------------|
 | 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes |
+
 | Segments Amount | Single Segment Size | Window Timeout |
-|-----------------|:-------------------:|:--------------:|
+|-----------------|---------------------|----------------|
 | 8 Bytes         | 8 Bytes             | 8 Bytes        |
 
 Type: 2
@@ -56,7 +58,7 @@ Type: 2
 #### Segment Layer
 
 | Segment ID | Segment Size |         Data         |
-|------------|-------------:|---------------------:|
+|------------|--------------|----------------------|
 | 8 Bytes    | 8 Bytes      | Segment Size * Bytes |
 
 Type: 3
@@ -78,7 +80,7 @@ Type: 5
 #### Upload Request Layer
 
 | Path Length |         Path          |
-|-------------|----------------------:|
+|-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
@@ -102,7 +104,7 @@ Data: segment of the file
 #### Download Request Layer
 
 | Path Length |         Path          |
-|-------------|----------------------:|
+|-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
@@ -135,7 +137,7 @@ Sub Type: 8
 #### List Request Layer
 
 | Path Length |         Path          |
-|-------------|----------------------:|
+|-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Auth Layer
@@ -145,7 +147,7 @@ Path: path of the directory (folder) on the server
 #### List Response Layer
 
 |  Directories Count |  Files Count |
-|--------------------|-------------:|
+|--------------------|--------------|
 | 8 Bytes            | 8 Bytes      |
 
 Type: Auth Response Layer
@@ -162,13 +164,13 @@ The full combine segments is:
 list of directories
 
 | Name Length |         Name          | Updated At |
-|-------------|----------------------:|-----------:|
+|-------------|-----------------------|------------|
 | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    |
 
 and list of files
 
 | Name Length |         Name          | Updated At | File Size  |
-|-------------|----------------------:|-----------:|-----------:|
+|-------------|-----------------------|------------|------------|
 | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
 Type: Segment Layer
