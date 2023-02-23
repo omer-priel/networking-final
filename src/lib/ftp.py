@@ -54,7 +54,7 @@ class BasicLayer(LayerInterface):
         return BasicLayer(
             pocketID,
             PocketType(pocketType),
-            PocketSubType(pocketType),
+            PocketSubType(pocketSubType),
         )
 
     def __init__(self, pocketID: int, pocketType=PocketType.Unknown, pocketSubType=PocketType.Unknown) -> None:
@@ -117,7 +117,7 @@ class AuthLayer(LayerInterface):
 
     def __str__(self) -> str:
         if self.anonymous:
-            " size: {}, anonymous |".format(self.pocketFullSize)
+            return " size: {}, anonymous |".format(self.pocketFullSize)
         return " size: {}, user-name: {} |".format(self.pocketFullSize, self.userName)
 
 
@@ -134,9 +134,12 @@ class AuthResponseLayer(LayerInterface):
         segmentsAmount, singleSegmentSize, windowTimeout = struct.unpack_from("LLL", data, offset)
         return AuthResponseLayer(ok, errorMessage, segmentsAmount, singleSegmentSize, float(windowTimeout / 1000))
 
-    def __init__(self, ok: bool, errorMessage: str, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float) -> None:
+    def __init__(self, ok: bool, errorMessage: str | None, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float) -> None:
         self.ok = ok
-        self.errorMessage = errorMessage
+        if not errorMessage:
+            self.errorMessage = ""
+        else:
+            self.errorMessage = errorMessage
         self.segmentsAmount = segmentsAmount
         self.singleSegmentSize = singleSegmentSize
         self.windowTimeout = windowTimeout
@@ -172,7 +175,7 @@ class SegmentLayer(LayerInterface):
         return struct.calcsize("LI") + len(self.data)
 
     def to_bytes(self) -> bytes:
-        return struct.pack("LI", self.segmentID, len(self.data))
+        return struct.pack("LI", self.segmentID, len(self.data)) + self.data
 
     def __str__(self) -> str:
         return " segment: {}, length: {} |".format(self.segmentID, len(self.data))

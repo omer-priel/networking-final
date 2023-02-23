@@ -304,11 +304,11 @@ def send_list_command(options: Options, directoryPath: str):
         print("Error: the list request faild")
         return None
 
-    if not resPocket.listResponseLayer.ok:
-        print("Error: " + resPocket.listResponseLayer.errorMessage)
+    if not resPocket.authResponseLayer.ok:
+        print("Error: " + resPocket.authResponseLayer.errorMessage)
         return None
 
-    if resPocket.listResponseLayer.directoriesCount == 0 and resPocket.listResponseLayer.directoriesCount == 0:
+    if resPocket.listResponseLayer.directoriesCount == 0 and resPocket.listResponseLayer.filesCount == 0:
         print("The directory is empty")
         return None
 

@@ -55,9 +55,9 @@ Type: 2
 
 #### Segment Layer
 
-| Segment ID |   Segment Length    |         Data         |
-|------------|--------------------:|---------------------:|
-| 8 Bytes    | 8 Bytes             | Segment Size * Bytes |
+| Segment ID | Segment Size |         Data         |
+|------------|-------------:|---------------------:|
+| 8 Bytes    | 8 Bytes      | Segment Size * Bytes |
 
 Type: 3
 

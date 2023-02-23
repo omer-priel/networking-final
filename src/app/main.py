@@ -65,7 +65,7 @@ def init_strorage():
 
 
 def get_path(filePath: str, storagePath: str) -> str:
-    return storagePath + "/" + filePath
+    return storagePath + filePath
 
 
 def in_storage(path: str, storagePath: str):
@@ -241,7 +241,6 @@ def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int], sto
     resPocket.authResponseLayer = AuthResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
     appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
-
     # recv segments
     while len(neededSegments) > 0:
         try:
@@ -317,7 +316,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int], s
     ready = False
     while not ready:
         resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.DownloadResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, segmentsAmount, singleSegmentSize, windowTimeout)
+        resPocket.authResponseLayer = AuthResponseLayer(True, errorMessage, segmentsAmount, singleSegmentSize, windowTimeout)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
         # recive the ready ACK from the client

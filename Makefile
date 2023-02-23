@@ -177,10 +177,10 @@ test-client-download-user-without-password:
 	PYTHONPATH=. poetry run python src/client/main.py --user bar download A.md ./temp/A.md
 
 test-client-download-user-multi:
-	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/a/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/b/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/a/c/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download child-dir/100.txt ./temp/b/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download a/100.txt ./temp/a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download b/100.txt ./temp/b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download a/c/100.txt ./temp/a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download b/c/100.txt ./temp/b/c/100.txt
 
 test-client-list:
 	PYTHONPATH=. poetry run python src/client/main.py list
@@ -208,7 +208,7 @@ test-client-list-user:
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list
 
 test-client-list-user-without-password:
-	PYTHONPATH=. poetry run python src/client/main.py --user bar list
+	PYTHONPATH=. poetry run python src/client/main.py --user bar list .
 
 test-client-list-user-multi:
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list
