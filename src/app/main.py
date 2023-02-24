@@ -25,13 +25,6 @@ class StorageData(BaseModel):
 # globals
 appSocket: socket.socket
 
-
-def main() -> None:
-    init_app()
-    create_socket()
-    main_loop()
-
-
 def init_app() -> None:
     init_config()
     init_logging()
@@ -40,7 +33,7 @@ def init_app() -> None:
     logging.info("The app is initialized")
 
 
-def init_strorage():
+def init_strorage() -> None:
     if not os.path.isdir(config.APP_STORAGE_PATH):
         os.mkdir(config.APP_STORAGE_PATH)
 
@@ -60,39 +53,11 @@ def get_path(filePath: str, storagePath: str) -> str:
     return storagePath + filePath
 
 
-def in_storage(path: str, storagePath: str):
+def in_storage(path: str, storagePath: str) -> bool:
     return os.path.commonpath([os.path.abspath(get_path(path, storagePath)), os.path.abspath(storagePath)]) == os.path.abspath(storagePath)
 
 
-def create_socket() -> None:
-    global appSocket
-
-    appSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    appSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    appSocket.bind((config.APP_HOST, config.APP_PORT))
-    appSocket.setblocking(1)
-    appSocket.settimeout(config.SOCKET_TIMEOUT)
-
-    logging.info("The app socket initialized on " + config.APP_HOST + ":" + str(config.APP_PORT))
-
-
-def main_loop() -> None:
-    while True:
-        try:
-            data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
-
-            reqPocket = Pocket.from_bytes(data)
-
-            if not reqPocket.authLayer:
-                send_close(reqPocket.get_id(), clientAddress)
-            else:
-                handle_request(reqPocket, clientAddress)
-        except socket.error:
-            pass
-
-
-# working with clients
+# RUDP
 currentPocketID = 0
 nextPocketID = False
 
@@ -111,6 +76,19 @@ def create_current_pocketID(forNextRequest=False) -> int:
     return currentPocketID
 
 
+def create_socket() -> None:
+    global appSocket
+
+    appSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    appSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    appSocket.bind((config.APP_HOST, config.APP_PORT))
+    appSocket.setblocking(1)
+    appSocket.settimeout(config.SOCKET_TIMEOUT)
+
+    logging.info("The app socket initialized on " + config.APP_HOST + ":" + str(config.APP_PORT))
+
+
 def send_close(pocketID: int, clientAddress: Any) -> None:
     closePocket = Pocket(BasicLayer(pocketID, PocketType.Close))
     appSocket.sendto(closePocket.to_bytes(), clientAddress)
@@ -126,6 +104,21 @@ def recv_pocket() -> Pocket:
             send_close(pocket.get_id(), clientAddress)
     except socket.error as ex:
         raise ex
+
+
+def main_loop() -> None:
+    while True:
+        try:
+            data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
+
+            reqPocket = Pocket.from_bytes(data)
+
+            if not reqPocket.authLayer:
+                send_close(reqPocket.get_id(), clientAddress)
+            else:
+                handle_request(reqPocket, clientAddress)
+        except socket.error:
+            pass
 
 
 # controllers
@@ -513,6 +506,13 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int], stora
 
     # send close pocket
     send_close(pocketID, clientAddress)
+
+
+# entry point
+def main() -> None:
+    init_app()
+    create_socket()
+    main_loop()
 
 
 if __name__ == "__main__":
