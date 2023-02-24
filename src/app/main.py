@@ -5,6 +5,7 @@ import os
 import os.path
 import socket
 from typing import Any
+from abc import ABC, abstractclassmethod
 import json
 import uuid
 from pydantic import BaseModel
@@ -106,37 +107,71 @@ def recv_pocket() -> Pocket:
         raise ex
 
 
-from abc import ABC, abstractclassmethod
-
-class RequestHandler:
-    def __init__(self, request: Pocket, storagePath: str):
+class RequestHandler(ABC):
+    def __init__(self, request: Pocket, clientAddress: tuple[str, int], requestID: int, storagePath: str):
         self.request = request
-        self.storagePath = storagePath
+        self._clientAddress = clientAddress
+        self._requestID = requestID
+        self._storagePath = storagePath
+
+    @abstractclassmethod
+    def route(self) -> tuple[Pocket, bytes]:
+        pass
+
+    def get_client_address(self) -> tuple[str, int]:
+        return self._clientAddress
+
+    def get_requestID(self):
+        return self._requestID
 
     def get_path(self, path: str) -> str:
-        return get_path(path, self.storagePath)
+        return get_path(path, self._storagePath)
 
-    
 
+class UploadRequestHandler(RequestHandler):
+    def __init__(self, request: Pocket, storagePath: str):
+        RequestHandler.__init__(self, request, storagePath)
+
+    @abstractclassmethod
+    def postUpload(self, data: bytes) -> None:
+        pass
+
+
+class DownloadRequestHandler(RequestHandler):
+    def __init__(self, request: Pocket, storagePath: str):
+        RequestHandler.__init__(self, request, storagePath)
+
+    @abstractclassmethod
+    def getData(self) -> bytes:
+        pass
+
+    @abstractclassmethod
+    def postDownload(self) -> None:
+        pass
 
 
 def main_loop() -> None:
+    handlers: dict[int, RequestHandler]  = []
     while True:
         try:
             data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
 
-            reqPocket = Pocket.from_bytes(data)
+            pocket = Pocket.from_bytes(data)
 
-            if not reqPocket.authLayer:
-                send_close(reqPocket.get_id(), clientAddress)
+            if pocket.authLayer:
+                handler = create_handler(pocket, clientAddress)
+                if handler:
+                    handlers[handler.get_requestID()] = handler
+            elif pocket.get_id() in handlers:
+                pass
             else:
-                handle_request(reqPocket, clientAddress)
+                send_close(pocket.get_id(), clientAddress)
         except socket.error:
             pass
 
 
 # controllers
-def handle_request(reqPocket: Pocket, clientAddress: tuple[str, int]) -> None:
+def create_handler(reqPocket: Pocket, clientAddress: tuple[str, int]) -> RequestHandler | None:
     storagePath = config.APP_STORAGE_PATH + config.STORAGE_PUBLIC + "/"
 
     if not reqPocket.authLayer.anonymous:
