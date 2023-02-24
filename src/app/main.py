@@ -49,8 +49,8 @@ def init_strorage() -> None:
             outputFile.write(storageData.json())
 
 
-def get_path(filePath: str, storagePath: str) -> str:
-    return storagePath + filePath
+def get_path(path: str, storagePath: str) -> str:
+    return storagePath + path
 
 
 def in_storage(path: str, storagePath: str) -> bool:
@@ -104,6 +104,20 @@ def recv_pocket() -> Pocket:
             send_close(pocket.get_id(), clientAddress)
     except socket.error as ex:
         raise ex
+
+
+from abc import ABC, abstractclassmethod
+
+class RequestHandler:
+    def __init__(self, request: Pocket, storagePath: str):
+        self.request = request
+        self.storagePath = storagePath
+
+    def get_path(self, path: str) -> str:
+        return get_path(path, self.storagePath)
+
+    
+
 
 
 def main_loop() -> None:
