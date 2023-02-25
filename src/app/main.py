@@ -4,6 +4,7 @@ import logging
 import os
 import os.path
 import socket
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 from abc import ABC, abstractclassmethod
 import json
@@ -25,6 +26,8 @@ class StorageData(BaseModel):
 
 # globals
 appSocket: socket.socket
+executor = ThreadPoolExecutor(2)
+
 
 def init_app() -> None:
     init_config()
@@ -109,7 +112,7 @@ def recv_pocket() -> Pocket:
             pocket = Pocket.from_bytes(data)
             if pocket.get_id() == get_current_pocketID():
                 return pocket
-            send_close(pocket.get_id(), clientAddress)
+            send_close(clientAddress)
     except socket.error as ex:
         raise ex
 
@@ -157,6 +160,9 @@ class DownloadRequestHandler(RequestHandler):
         self.data = b""
         self.windowToSend = []
         self.windowSending = []
+        self.ready = False
+        self.response: Pocket = None
+        self.pockets: list[Pocket] = []
 
 
 class UploadFileRequestHandler(UploadRequestHandler):
@@ -273,30 +279,105 @@ class ListRequestHandler(DownloadRequestHandler):
 
 
 def main_loop() -> None:
+    # dict of handlers for the requests
     handlers: dict[int, RequestHandler] = {}
+
+    # dict of responses for unready requests
+    notReady: dict[int, Pocket] = {}
     while True:
         try:
             data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
 
             pocket = Pocket.from_bytes(data)
 
-            if pocket.authLayer:
-                handler = create_handler(pocket, clientAddress)
-                if handler:
+            for key in notReady:
+                if not key == pocket.get_id():
+                    appSocket.sendto(notReady[key], handlers[key].get_requestID())
+
+            if pocket.basicLayer.pocketType == PocketType.Auth:
+                result = create_handler(pocket, clientAddress)
+                if result:
+                    handler, res = result
+                    if not handler.uploadHandler:
+                        notReady[handler.get_requestID()] = res
+                    
                     handlers[handler.get_requestID()] = handler
             elif pocket.get_id() in handlers:
                 handler = handlers[pocket.get_id()]
                 if handler.uploadHandler:
                     if not handle_upload_pocket(handler, pocket):
                         handlers.pop(handler.get_requestID())
+                else:
+                    if not handler.ready:
+                        handler.ready = True
+                        notReady.pop(handler.get_requestID())
+                       
+                        def downloading_task(handler: DownloadRequestHandler):
+                            windowTimeout = handler.response.authResponseLayer.windowTimeout
+                            singleSegmentSize = handler.response.authResponseLayer.singleSegmentSize
+                            segmentsAmount = handler.response.authResponseLayer.segmentsAmount
+                            dataSize = len(handler.data)
+
+                            last = time.time()
+                            downloading = True
+
+                            while downloading:
+                                now = time.time()
+                                if last + windowTimeout > now:
+                                    # send a segment
+                                    if len(handler.windowToSend) == 0:
+                                        time.sleep(last + windowTimeout - now)
+                                    else:
+                                        segmentID = handler.windowToSend.pop(0)
+                                        if segmentID * singleSegmentSize <= dataSize - singleSegmentSize:
+                                            # is not the last segment
+                                            segment = handler.data[segmentID * singleSegmentSize: (segmentID + 1) * singleSegmentSize]
+                                        else:
+                                            # is the last segment
+                                            segment = handler.data[segmentID * singleSegmentSize:]
+
+                                        segmentPocket = Pocket(BasicLayer(handler.get_requestID(), PocketType.Segment))
+                                        segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
+                                                                                
+                                        handler.windowSending.append(segmentID)
+                                        appSocket.sendto(segmentPocket.to_bytes(), clientAddress)
+                                else:
+                                    # refresh window
+                                    logging.debug(
+                                        "refresh window {}/{}".format(segmentsAmount - len(handler.windowToSend) - len(handler.windowSending), segmentsAmount)
+                                    )
+                                    while len(handler.pockets) > 0:
+                                        print(pocket)
+                                        pocket = handler.pockets.pop(0)
+                                        if pocket.basicLayer.pocketSubType == PocketSubType.ListComplited:
+                                            # complit the downloading
+                                            handler.pockets = []
+                                            downloading = False
+                                        elif pocket.akcLayer:
+                                            if pocket.akcLayer.segmentID in handler.windowToSend:
+                                                handler.windowToSend.remove(pocket.akcLayer.segmentID)
+                                            if pocket.akcLayer.segmentID in handler.windowSending:
+                                                handler.windowSending.remove(pocket.akcLayer.segmentID)
+                                            else:
+                                                logging.error("Get pocket that not ACK and not download complited")
+                                    handler.windowToSend = handler.windowSending + handler.windowToSend
+                                    handler.windowSending = []
+                                    last = time.time()
+
+                            handlers.pop(handler.get_requestID())
+                       
+                        executor.submit(downloading_task, handler)
+                    else:
+                        handler.pockets += [pocket]
+
             else:
-                send_close(pocket.get_id(), clientAddress)
+                send_close(clientAddress)
         except socket.error:
             pass
 
 
 # controllers
-def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> RequestHandler | None:
+def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[RequestHandler, Pocket] | None:
     storagePath = config.APP_STORAGE_PATH + config.STORAGE_PUBLIC + "/"
 
     if not request.authLayer.anonymous:
@@ -344,11 +425,11 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> RequestHa
     res, data = result
 
     if handler.uploadHandler:
-        dataLength = request.authLayer.pocketFullSize
+        dataSize = request.authLayer.pocketFullSize
     else:
-        dataLength = len(data)
+        dataSize = len(data)
     
-    if dataLength == 0:
+    if dataSize == 0:
         res.authResponseLayer = AuthResponseLayer(True, "", 0, 0, 0)
         appSocket.sendto(res.to_bytes(), clientAddress)
         return None
@@ -356,12 +437,14 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> RequestHa
     singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, request.authLayer.maxSingleSegmentSize)
     singleSegmentSize = min(config.SINGLE_SEGMENT_SIZE_MAX, singleSegmentSize)
 
-    segmentsAmount = int(dataLength / singleSegmentSize)
-    if segmentsAmount * singleSegmentSize < dataLength:
+    segmentsAmount = int(dataSize / singleSegmentSize)
+    if segmentsAmount * singleSegmentSize < dataSize:
         segmentsAmount += 1
 
     windowTimeout = max(config.WINDOW_TIMEOUT_MIN, request.authLayer.maxWindowTimeout)
     windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
+
+    res.authResponseLayer = AuthResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
 
     if handler.uploadHandler:
         handler.segmentsAmount = segmentsAmount
@@ -369,10 +452,11 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> RequestHa
         handler.data = data
         handler.windowToSend = list(range(segmentsAmount))
         handler.windowSending = []
+        handler.response = res
 
-    res.authResponseLayer = AuthResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
     appSocket.sendto(res.to_bytes(), clientAddress)
-    return handler
+    return (handler, res)
+
 
 def handle_upload_pocket(handler: UploadRequestHandler, pocket: Pocket) -> bool:
     if (not pocket.segmentLayer) or (not pocket.basicLayer.pocketType == PocketType.Segment):
@@ -399,98 +483,6 @@ def handle_upload_pocket(handler: UploadRequestHandler, pocket: Pocket) -> bool:
             return False
         
     return True
-
-def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
-    # valid pocket
-    errorMessage: str | None = None
-    if not reqPocket.uploadRequestLayer:
-        errorMessage = "This is not upload request"
-    elif len(reqPocket.uploadRequestLayer.path) > config.FILE_PATH_MAX_LENGTH:
-        errorMessage = "The file path cannot be more then {} chars".format(config.FILE_PATH_MAX_LENGTH)
-    elif reqPocket.authLayer.pocketFullSize <= 0:
-        errorMessage = "The file cannot be empty"
-    elif not in_storage(reqPocket.uploadRequestLayer.path, storagePath):
-            errorMessage = "The path {} is not legal".format(reqPocket.uploadRequestLayer.path)
-
-    if errorMessage:
-        logging.error(errorMessage)
-        resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse, PocketSubType.UploadResponse))
-        resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, 0, 0, 0)
-        appSocket.sendto(resPocket.to_bytes(), clientAddress)
-        return None
-
-    fileSize = reqPocket.authLayer.pocketFullSize
-
-    # create the file
-    filePath = get_path(reqPocket.uploadRequestLayer.path, storagePath)
-    directoyPath = os.path.dirname(filePath)
-
-    # delete the file if already exists
-    if os.path.isfile(filePath):
-        os.remove(filePath)
-
-    if not directoyPath:
-        directoyPath = "."
-    elif not os.path.isdir(directoyPath):
-        os.makedirs(directoyPath, exist_ok=True)
-
-    fileStream = open(filePath, "w")
-
-    # split to segments info
-    singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, reqPocket.authLayer.maxSingleSegmentSize)
-    singleSegmentSize = min(config.SINGLE_SEGMENT_SIZE_MAX, singleSegmentSize)
-
-    segmentsAmount = int(fileSize / singleSegmentSize)
-    if segmentsAmount * singleSegmentSize < fileSize:
-        segmentsAmount += 1
-
-    windowTimeout = max(config.WINDOW_TIMEOUT_MIN, reqPocket.authLayer.maxWindowTimeout)
-    windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
-
-    # init the window
-    neededSegments = list(range(segmentsAmount))
-    segments = [b""] * segmentsAmount
-
-    # send auth respose pocket
-    pocketID = create_current_pocketID()
-    resPocket = Pocket(BasicLayer(pocketID, PocketType.AuthResponse, PocketSubType.UploadResponse))
-    resPocket.authResponseLayer = AuthResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
-    appSocket.sendto(resPocket.to_bytes(), clientAddress)
-
-    # recv segments
-    while len(neededSegments) > 0:
-        try:
-            segmentPocket = recv_pocket()
-
-            if (not segmentPocket.segmentLayer) or (
-                not segmentPocket.basicLayer.pocketType == PocketType.Segment
-            ):
-                logging.error("Get pocket that is not upload segment")
-            else:
-                segmentID = segmentPocket.segmentLayer.segmentID
-                if segmentID in neededSegments:
-                    # add new segment
-                    neededSegments.remove(segmentID)
-                    segments[segmentID] = segmentPocket.segmentLayer.data
-
-                akcPocket = Pocket(BasicLayer(pocketID, PocketType.ACK))
-                akcPocket.akcLayer = AKCLayer(segmentID)
-                appSocket.sendto(akcPocket.to_bytes(), clientAddress)
-        except socket.error:
-            pass
-
-    # send close pocket
-    create_current_pocketID(True)
-    send_close(pocketID, clientAddress)
-
-    # save the file
-    for segment in segments:
-        fileStream.write(segment.decode())
-
-    # clean up
-    fileStream.close()
-
-    logging.info('The file "{}" uploaded'.format(reqPocket.uploadRequestLayer.path))
 
 
 def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
@@ -601,7 +593,7 @@ def handle_download_request(reqPocket: Pocket, clientAddress: tuple[str, int], s
     fileStream.close()
 
     # send close pocket
-    send_close(pocketID, clientAddress)
+    send_close(clientAddress)
 
 
 def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
@@ -736,7 +728,8 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int], stora
             last = time.time()
 
     # send close pocket
-    send_close(pocketID, clientAddress)
+    send_close(clientAddress)
+
 
 # entry point
 def main() -> None:
