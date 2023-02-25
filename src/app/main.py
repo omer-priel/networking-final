@@ -143,6 +143,7 @@ class UploadRequestHandler(RequestHandler):
     def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
         RequestHandler.__init__(self, True, request, clientAddress, storagePath)
         self.segments: dict[int, bytes] = {}
+        self.segmentsAmount = 0
 
 
     @abstractclassmethod
@@ -197,7 +198,7 @@ class UploadFileRequestHandler(UploadRequestHandler):
 
         # save the file
         with open(filePath, "w") as f:
-            f.write(data)
+            f.write(data.decode())
 
         logging.info('The file "{}" uploaded'.format(self.request.uploadRequestLayer.path))
 
@@ -283,9 +284,11 @@ def main_loop() -> None:
                 handler = create_handler(pocket, clientAddress)
                 if handler:
                     handlers[handler.get_requestID()] = handler
-                    print(handler)
             elif pocket.get_id() in handlers:
-                pass
+                handler = handlers[pocket.get_id()]
+                if handler.uploadHandler:
+                    if not handle_upload_pocket(handler, pocket):
+                        handlers.pop(handler.get_requestID())
             else:
                 send_close(pocket.get_id(), clientAddress)
         except socket.error:
@@ -360,7 +363,9 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> RequestHa
     windowTimeout = max(config.WINDOW_TIMEOUT_MIN, request.authLayer.maxWindowTimeout)
     windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
 
-    if not handler.uploadHandler:
+    if handler.uploadHandler:
+        handler.segmentsAmount = segmentsAmount
+    else:
         handler.data = data
         handler.windowToSend = list(range(segmentsAmount))
         handler.windowSending = []
@@ -369,6 +374,31 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> RequestHa
     appSocket.sendto(res.to_bytes(), clientAddress)
     return handler
 
+def handle_upload_pocket(handler: UploadRequestHandler, pocket: Pocket) -> bool:
+    if (not pocket.segmentLayer) or (not pocket.basicLayer.pocketType == PocketType.Segment):
+        logging.error("Get pocket that is not upload segment")
+    else:
+        segmentID = pocket.segmentLayer.segmentID
+        if segmentID not in handler.segments:
+            # add new segment
+            handler.segments[segmentID] = pocket.segmentLayer.data
+
+        akcPocket = Pocket(BasicLayer(handler.get_requestID(), PocketType.ACK))
+        akcPocket.akcLayer = AKCLayer(segmentID)
+        appSocket.sendto(akcPocket.to_bytes(), handler.get_client_address())
+
+        if len(handler.segments) == handler.segmentsAmount:
+            # upload all
+            data = b""
+            for key in sorted(handler.segments):
+                data += handler.segments[key]
+
+            send_close(handler.get_client_address())
+            
+            handler.post_upload(data)
+            return False
+        
+    return True
 
 def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
     # valid pocket
