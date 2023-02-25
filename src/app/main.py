@@ -115,10 +115,11 @@ def recv_pocket() -> Pocket:
 
 
 class RequestHandler(ABC):
-    def __init__(self, request: Pocket, clientAddress: tuple[str, int], requestID: int, storagePath: str):
+    def __init__(self, uploadHandler: bool, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
+        self.uploadHandler = uploadHandler
         self.request = request
         self._clientAddress = clientAddress
-        self.requestID = requestID
+        self.requestID = 0
         self._storagePath = storagePath
 
     @abstractclassmethod
@@ -139,9 +140,9 @@ class RequestHandler(ABC):
 
 
 class UploadRequestHandler(RequestHandler):
-    def __init__(self, request: Pocket, storagePath: str):
-        RequestHandler.__init__(self, request, storagePath)
-        self.segments: dict[int, str] = {}
+    def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
+        RequestHandler.__init__(self, True, request, clientAddress, storagePath)
+        self.segments: dict[int, bytes] = {}
 
 
     @abstractclassmethod
@@ -150,9 +151,11 @@ class UploadRequestHandler(RequestHandler):
 
 
 class DownloadRequestHandler(RequestHandler):
-    def __init__(self, request: Pocket, storagePath: str):
-        RequestHandler.__init__(self, request, storagePath)
+    def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
+        RequestHandler.__init__(self, False, request, clientAddress, storagePath)
         self.data = b""
+        self.windowToSend = []
+        self.windowSending = []
 
 
 class UploadFileRequestHandler(UploadRequestHandler):
@@ -269,7 +272,7 @@ class ListRequestHandler(DownloadRequestHandler):
 
 
 def main_loop() -> None:
-    handlers: dict[int, RequestHandler]  = []
+    handlers: dict[int, RequestHandler] = {}
     while True:
         try:
             data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
@@ -280,6 +283,7 @@ def main_loop() -> None:
                 handler = create_handler(pocket, clientAddress)
                 if handler:
                     handlers[handler.get_requestID()] = handler
+                    print(handler)
             elif pocket.get_id() in handlers:
                 pass
             else:
@@ -289,51 +293,81 @@ def main_loop() -> None:
 
 
 # controllers
-def create_handler(reqPocket: Pocket, clientAddress: tuple[str, int]) -> RequestHandler | None:
+def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> RequestHandler | None:
     storagePath = config.APP_STORAGE_PATH + config.STORAGE_PUBLIC + "/"
 
-    if not reqPocket.authLayer.anonymous:
+    if not request.authLayer.anonymous:
         # valid user
-        errorMessage: str | None = None
-        if reqPocket.authLayer.userName == "":
-            errorMessage = "The user name cannot be empty"
-        else:
-            with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "r") as dataFile:
-                storageData = StorageData(**json.load(dataFile))
-
-        if not errorMessage:
-            # check if the user not exists
-            userData = storageData.users.get(reqPocket.authLayer.userName)
-
-            if userData:
-                if not userData.password == reqPocket.authLayer.password:
-                    errorMessage == "the password is incorrect"
-            else:
-                userData = UserData(id=str(uuid.uuid4()), password=reqPocket.authLayer.password)
-                while os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id):
-                    userData.id = str(uuid.uuid4())
-
-                os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id)
-                storageData.users[reqPocket.authLayer.userName] = userData
-
-                with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "w") as dataFile:
-                    dataFile.write(storageData.json())
-
-        if errorMessage:
-            logging.error(errorMessage)
-            resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse))
-            resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, 0, 0, 0)
-            appSocket.sendto(resPocket.to_bytes(), clientAddress)
+        if request.authLayer.userName == "":
+            send_error("The user name cannot be empty", clientAddress)
             return None
+
+        with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "r") as dataFile:
+            storageData = StorageData(**json.load(dataFile))
+
+        # check if the user not exists
+        userData = storageData.users.get(request.authLayer.userName)
+
+        if userData:
+            if not userData.password == request.authLayer.password:
+                send_error("the password is incorrect", clientAddress)
+                return None
+            
+            userData = UserData(id=str(uuid.uuid4()), password=request.authLayer.password)
+            while os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id):
+                userData.id = str(uuid.uuid4())
+
+            os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id)
+            storageData.users[request.authLayer.userName] = userData
+
+            with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "w") as dataFile:
+                dataFile.write(storageData.json())
 
         storagePath = config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id  + "/"
 
-    if reqPocket.basicLayer.pocketSubType == PocketSubType.UploadRequest:
-        handle_upload_request(reqPocket, clientAddress, storagePath)
-    elif reqPocket.basicLayer.pocketSubType == PocketSubType.DownloadRequest:
-        handle_download_request(reqPocket, clientAddress, storagePath)
-    elif reqPocket.basicLayer.pocketSubType == PocketSubType.ListRequest:
-        handle_list_request(reqPocket, clientAddress, storagePath)
+    handler: RequestHandler
+
+    if request.basicLayer.pocketSubType == PocketSubType.UploadRequest:
+        handler = UploadFileRequestHandler(request, clientAddress, storagePath)
+    elif request.basicLayer.pocketSubType == PocketSubType.DownloadRequest:
+        handler = DownloadFileRequestHandler(request, clientAddress, storagePath)
+    elif request.basicLayer.pocketSubType == PocketSubType.ListRequest:
+        handler = ListRequestHandler(request, clientAddress, storagePath)
+
+    result = handler.route()
+    if not result:
+        return None
+    
+    res, data = result
+
+    if handler.uploadHandler:
+        dataLength = request.authLayer.pocketFullSize
+    else:
+        dataLength = len(data)
+    
+    if dataLength == 0:
+        res.authResponseLayer = AuthResponseLayer(True, "", 0, 0, 0)
+        appSocket.sendto(res.to_bytes(), clientAddress)
+        return None
+
+    singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, request.authLayer.maxSingleSegmentSize)
+    singleSegmentSize = min(config.SINGLE_SEGMENT_SIZE_MAX, singleSegmentSize)
+
+    segmentsAmount = int(dataLength / singleSegmentSize)
+    if segmentsAmount * singleSegmentSize < dataLength:
+        segmentsAmount += 1
+
+    windowTimeout = max(config.WINDOW_TIMEOUT_MIN, request.authLayer.maxWindowTimeout)
+    windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
+
+    if not handler.uploadHandler:
+        handler.data = data
+        handler.windowToSend = list(range(segmentsAmount))
+        handler.windowSending = []
+
+    res.authResponseLayer = AuthResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
+    appSocket.sendto(res.to_bytes(), clientAddress)
+    return handler
 
 
 def handle_upload_request(reqPocket: Pocket, clientAddress: tuple[str, int], storagePath: str) -> None:
@@ -673,7 +707,6 @@ def handle_list_request(reqPocket: Pocket, clientAddress: tuple[str, int], stora
 
     # send close pocket
     send_close(pocketID, clientAddress)
-
 
 # entry point
 def main() -> None:
