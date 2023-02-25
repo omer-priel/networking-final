@@ -90,9 +90,16 @@ def create_socket() -> None:
     logging.info("The app socket initialized on " + config.APP_HOST + ":" + str(config.APP_PORT))
 
 
-def send_close(pocketID: int, clientAddress: Any) -> None:
-    closePocket = Pocket(BasicLayer(pocketID, PocketType.Close))
+def send_close(clientAddress: Any) -> None:
+    closePocket = Pocket(BasicLayer(0, PocketType.Close))
     appSocket.sendto(closePocket.to_bytes(), clientAddress)
+
+
+def send_error(errorMessage: str, clientAddress: Any) -> None:
+        logging.error(errorMessage)
+        resPocket = Pocket(BasicLayer(0, PocketType.AuthResponse))
+        resPocket.authResponseLayer = AuthResponseLayer(False, errorMessage, 0, 0, 0)
+        appSocket.sendto(resPocket.to_bytes(), clientAddress)
 
 
 def recv_pocket() -> Pocket:
@@ -111,43 +118,154 @@ class RequestHandler(ABC):
     def __init__(self, request: Pocket, clientAddress: tuple[str, int], requestID: int, storagePath: str):
         self.request = request
         self._clientAddress = clientAddress
-        self._requestID = requestID
+        self.requestID = requestID
         self._storagePath = storagePath
 
     @abstractclassmethod
-    def route(self) -> tuple[Pocket, bytes]:
+    def route(self) -> tuple[Pocket, bytes | None] | None:
         pass
 
     def get_client_address(self) -> tuple[str, int]:
         return self._clientAddress
 
     def get_requestID(self):
-        return self._requestID
+        return self.requestID
 
     def get_path(self, path: str) -> str:
         return get_path(path, self._storagePath)
+
+    def send_error(self, errorMessage: str) -> None:
+        send_error(errorMessage, self._clientAddress)
 
 
 class UploadRequestHandler(RequestHandler):
     def __init__(self, request: Pocket, storagePath: str):
         RequestHandler.__init__(self, request, storagePath)
+        self.segments: dict[int, str] = {}
+
 
     @abstractclassmethod
-    def postUpload(self, data: bytes) -> None:
+    def post_upload(self, data: bytes) -> None:
         pass
 
 
 class DownloadRequestHandler(RequestHandler):
     def __init__(self, request: Pocket, storagePath: str):
         RequestHandler.__init__(self, request, storagePath)
+        self.data = b""
 
-    @abstractclassmethod
-    def getData(self) -> bytes:
-        pass
 
-    @abstractclassmethod
-    def postDownload(self) -> None:
-        pass
+class UploadFileRequestHandler(UploadRequestHandler):
+    def route(self) -> tuple[Pocket, bytes | None] | None:
+        # validation
+        if not self.request.uploadRequestLayer:
+            self.send_error("This is not upload request")
+            return None
+
+        if len(self.request.uploadRequestLayer.path) > config.FILE_PATH_MAX_LENGTH:
+            self.send_error("The file path cannot be more then {} chars".format(config.FILE_PATH_MAX_LENGTH))
+            return None
+
+        if self.request.authLayer.pocketFullSize <= 0:
+            self.send_error("The file cannot be empty")
+            return None
+
+        if not in_storage(self.request.uploadRequestLayer.path, self._storagePath):
+            self.send_error("The path {} is not legal".format(self.request.uploadRequestLayer.path))
+            return None
+
+        self.requestID = create_current_pocketID()
+        res = Pocket(BasicLayer(self.requestID, PocketType.AuthResponse, PocketSubType.UploadResponse))
+        return (res, None)
+
+    def post_upload(self, data: bytes) -> None:
+        # create the file
+        filePath = self.get_path(self.request.uploadRequestLayer.path)
+        directoyPath = os.path.dirname(filePath)
+
+        # delete the file if already exists
+        if os.path.isfile(filePath):
+            os.remove(filePath)
+
+        if not directoyPath:
+            directoyPath = "."
+        elif not os.path.isdir(directoyPath):
+            os.makedirs(directoyPath, exist_ok=True)
+
+        # save the file
+        with open(filePath, "w") as f:
+            f.write(data)
+
+        logging.info('The file "{}" uploaded'.format(self.request.uploadRequestLayer.path))
+
+
+class DownloadFileRequestHandler(DownloadRequestHandler):
+    def route(self) -> tuple[Pocket, bytes | None] | None:
+        # validation
+        if not self.request.downloadRequestLayer:
+            self.send_error("This is not download request")
+            return None
+
+        filePath = self.get_path(self.request.downloadRequestLayer.path)
+        if not os.path.isfile(filePath):
+            self.send_error('The file "{}" dos not exists!'.format(self.request.downloadRequestLayer.path))
+            return None
+
+        if not in_storage(self.request.downloadRequestLayer.path, self._storagePath):
+            self.send_error('The file "{}" dos not exists!'.format(self.request.downloadRequestLayer.path))
+            return None
+
+        # read the file
+        with open(filePath, "r") as f:
+            data = f.read()
+
+        self.requestID = create_current_pocketID()
+        res = Pocket(BasicLayer(self.requestID, PocketType.AuthResponse, PocketSubType.DownloadResponse))
+        return (res, data)
+
+
+class ListRequestHandler(DownloadRequestHandler):
+    def route(self) -> tuple[Pocket, bytes | None] | None:
+        # validation
+        if not self.request.listRequestLayer:
+            self.send_error("This is not list request")
+            return None
+
+        directoryPath = self.get_path(self.request.listRequestLayer.path)
+        if not os.path.isdir(directoryPath):
+            self.send_error('The directory "{}" dos not exists!'.format(self.request.listRequestLayer.path))
+            return None
+
+        if not in_storage(self.request.listRequestLayer.path, self._storagePath):
+            self.send_error('The directory "{}" dos not exists!'.format(self.request.listRequestLayer.path))
+            return None
+
+        # load the content
+        directoriesAndFiles = os.listdir(directoryPath)
+        directories = [directory for directory in directoriesAndFiles if os.path.isdir(directoryPath + "/" + directory)]
+        files = [file for file in directoriesAndFiles if os.path.isfile(directoryPath + "/" + file)]
+
+        # soring the directories and files
+        directories.sort()
+        files.sort()
+
+        # convet to bytes
+        data = b""
+        for directoryName in directories:
+            updatedAt = os.path.getmtime(directoryPath + "/" + directoryName)
+
+            data += pack_directory_block(directoryName, updatedAt)
+
+        for fileName in files:
+            updatedAt = os.path.getmtime(directoryPath + "/" + fileName)
+            fileSize = os.stat(directoryPath + "/" + fileName).st_size
+
+            data += pack_file_block(fileName, updatedAt, fileSize)
+
+        self.requestID = create_current_pocketID()
+        res = Pocket(BasicLayer(self.requestID, PocketType.AuthResponse, PocketSubType.ListResponse))
+        res.listResponseLayer = ListResponseLayer(len(directories), len(files))
+        return (res, data)
 
 
 def main_loop() -> None:
