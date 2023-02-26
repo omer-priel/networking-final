@@ -73,8 +73,8 @@ class BasicLayer(LayerInterface):
 class RequestLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> RequestLayer:
-        pocketFullSize, maxSingleSegmentSize, maxWindowTimeout, anonymous, userNameLength = struct.unpack_from(
-            "LLL?I", data, offset
+        pocketFullSize, maxSingleSegmentSize, anonymous, userNameLength = struct.unpack_from(
+            "LL?I", data, offset
         )
         offset += struct.calcsize("LLL?I")
         userName = ""
@@ -91,34 +91,31 @@ class RequestLayer(LayerInterface):
                 offset += passwordLength
 
         return RequestLayer(
-            pocketFullSize, maxSingleSegmentSize, float(maxWindowTimeout / 1000), anonymous, userName, password
+            pocketFullSize, maxSingleSegmentSize, anonymous, userName, password
         )
 
     def __init__(
         self,
         pocketFullSize: int,
         maxSingleSegmentSize: int,
-        maxWindowTimeout: float,
         anonymous: bool,
         userName: str,
         password: str,
     ) -> None:
         self.pocketFullSize = pocketFullSize
         self.maxSingleSegmentSize = maxSingleSegmentSize
-        self.maxWindowTimeout = maxWindowTimeout
         self.anonymous = anonymous
         self.userName = userName
         self.password = password
 
     def length(self) -> int:
-        return struct.calcsize("LLL?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
+        return struct.calcsize("LL?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
 
     def to_bytes(self) -> bytes:
         ret = struct.pack(
-            "LLL?I",
+            "LL?I",
             self.pocketFullSize,
             self.maxSingleSegmentSize,
-            int(self.maxWindowTimeout * 1000),
             self.anonymous,
             len(self.userName),
         )
@@ -143,11 +140,11 @@ class ResponseLayer(LayerInterface):
         else:
             errorMessage = data[offset : offset + errorMessageLength].decode()
             offset += errorMessageLength
-        dataSize, segmentsAmount, singleSegmentSize, windowTimeout = struct.unpack_from("LLLL", data, offset)
-        return ResponseLayer(ok, errorMessage, dataSize, segmentsAmount, singleSegmentSize, float(windowTimeout / 1000))
+        dataSize, segmentsAmount, singleSegmentSize = struct.unpack_from("LLL", data, offset)
+        return ResponseLayer(ok, errorMessage, dataSize, segmentsAmount, singleSegmentSize)
 
     def __init__(
-        self, ok: bool, errorMessage: str | None, dataSize: int, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float
+        self, ok: bool, errorMessage: str | None, dataSize: int, segmentsAmount: int, singleSegmentSize: int
     ) -> None:
         self.ok = ok
         if not errorMessage:
@@ -157,20 +154,19 @@ class ResponseLayer(LayerInterface):
         self.dataSize = dataSize
         self.segmentsAmount = segmentsAmount
         self.singleSegmentSize = singleSegmentSize
-        self.windowTimeout = windowTimeout
 
     def length(self) -> int:
-        return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LLLL")
+        return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LLL")
 
     def to_bytes(self) -> bytes:
         ret = struct.pack("?b", self.ok, len(self.errorMessage))
         ret += self.errorMessage.encode()
-        ret += struct.pack("LLLL", self.dataSize, self.segmentsAmount, self.singleSegmentSize, int(self.windowTimeout * 1000))
+        ret += struct.pack("LLL", self.dataSize, self.segmentsAmount, self.singleSegmentSize)
         return ret
 
     def __str__(self) -> str:
-        return " ok: {}, message: {}, size: {}, segments: {}, size: {}, window-timeout: {} |".format(
-            self.ok, self.errorMessage, self.dataSize, self.segmentsAmount, self.singleSegmentSize, self.windowTimeout
+        return " ok: {}, message: {}, size: {}, segments: {}, size: {} |".format(
+            self.ok, self.errorMessage, self.dataSize, self.segmentsAmount, self.singleSegmentSize
         )
 
 

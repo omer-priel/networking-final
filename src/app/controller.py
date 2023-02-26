@@ -74,7 +74,7 @@ def main_loop() -> None:
                             handler.locker.release()
 
                             rtt = config.SOCKET_TIMEOUT
-                            cwnd = cwndMax = 1500
+                            cwnd = cwndMax = config.CWND_START_VALUE
                             C, B = 0.4, 0.7
 
                             last = time.time()
@@ -209,7 +209,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
         dataSize = len(data)
 
     if dataSize == 0:
-        res.responseLayer = ResponseLayer(True, "", 0, 0, 0, 0)
+        res.responseLayer = ResponseLayer(True, "", 0, 0, 0)
         sendto(res, clientAddress)
 
         if handler.uploadHandler:
@@ -224,10 +224,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
     if segmentsAmount * singleSegmentSize < dataSize:
         segmentsAmount += 1
 
-    windowTimeout = max(config.WINDOW_TIMEOUT_MIN, request.requestLayer.maxWindowTimeout)
-    windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
-
-    res.responseLayer = ResponseLayer(True, "", dataSize, segmentsAmount, singleSegmentSize, windowTimeout)
+    res.responseLayer = ResponseLayer(True, "", dataSize, segmentsAmount, singleSegmentSize)
 
     if handler.uploadHandler:
         handler.segmentsAmount = segmentsAmount

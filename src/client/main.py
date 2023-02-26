@@ -15,7 +15,6 @@ from src.lib.ftp import *
 clientSocket: socket.socket
 
 MAX_SEGMENT_SIZE = 1000  # [byte]
-MAX_WINDOW_TIMEOUT = 1  # [s]
 
 
 class Options:
@@ -65,7 +64,7 @@ def upload_file(filename: str, destination: str) -> None:
     # create request pocket
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Upload))
     reqPocket.requestLayer = RequestLayer(
-        bodySize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+        bodySize, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password
     )
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination)
 
@@ -103,7 +102,7 @@ def upload_file(filename: str, destination: str) -> None:
     windowSending = []
 
     rtt = config.SOCKET_TIMEOUT
-    cwnd = cwndMax = 1500
+    cwnd = cwndMax = config.CWND_START_VALUE
     C, B = 0.4, 0.7
 
     last = time.time()
@@ -187,7 +186,7 @@ def download_file(filePath: str, destination: str):
     # send download request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Download))
     reqPocket.requestLayer = RequestLayer(
-        0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+        0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password
     )
     reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
 
@@ -301,7 +300,7 @@ def send_list_command(directoryPath: str):
     # send list request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.List))
     reqPocket.requestLayer = RequestLayer(
-        0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+        0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password
     )
     reqPocket.listRequestLayer = ListRequestLayer(directoryPath)
 

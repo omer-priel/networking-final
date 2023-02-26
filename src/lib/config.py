@@ -8,6 +8,8 @@ class Config:
 
     SOCKET_TIMEOUT: int = 0.1
     SOCKET_MAXSIZE: int = 4096
+    CWND_START_VALUE: int = 1500
+
     LOGGING_LEVEL: int = logging.DEBUG
 
 

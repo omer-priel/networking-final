@@ -30,9 +30,9 @@ Every Request / Response are made from Base Layer and the content layer
 
 #### Request Layer
 
-| Full Pocket Size | Max Single Segment Size | Max Window Timeout |
-|------------------|-------------------------|--------------------|
-| 8 Bytes          | 8 Bytes                 | 8 Bytes            |
+| Full Pocket Size | Max Single Segment Size |
+|------------------|-------------------------|
+| 8 Bytes          | 8 Bytes                 |
 
 | Anonymous | User Name Length |         User Name          | Password Length |         Password           |
 |-----------|------------------|----------------------------|-----------------|----------------------------|
@@ -46,9 +46,9 @@ Type: 1
 |---------|----------------------|--------------------------------|
 | 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes |
 
-| Data Size | Segments Amount | Single Segment Size | Window Timeout |
-|-----------|-----------------|---------------------|----------------|
-| 8 Bytes   | 8 Bytes         | 8 Bytes             | 8 Bytes        |
+| Data Size | Segments Amount | Single Segment Size |
+|-----------|-----------------|---------------------|
+| 8 Bytes   | 8 Bytes         | 8 Bytes             |
 
 Type: 2
 

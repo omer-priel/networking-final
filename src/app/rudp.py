@@ -45,5 +45,5 @@ def send_close(clientAddress: tuple[str, int]) -> None:
 def send_error(errorMessage: str, clientAddress: tuple[str, int]) -> None:
     logging.error(errorMessage)
     response = Pocket(BasicLayer(0, PocketType.Response))
-    response.responseLayer = ResponseLayer(False, errorMessage, 0, 0, 0, 0)
+    response.responseLayer = ResponseLayer(False, errorMessage, 0, 0, 0)
     sendto(response, clientAddress)
