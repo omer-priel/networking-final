@@ -1,10 +1,10 @@
 # entry point to Application
 
 import logging
+import sys
 import os
 import os.path
 import socket
-import sys
 import time
 
 from prettytable import PrettyTable
@@ -98,10 +98,13 @@ def upload_file(filename: str, destination: str) -> None:
 
     singleSegmentSize = resPocket.responseLayer.singleSegmentSize
     segmentsAmount = resPocket.responseLayer.segmentsAmount
-    windowTimeout = resPocket.responseLayer.windowTimeout
 
     windowToSend = list(range(segmentsAmount))
     windowSending = []
+
+    rtt = config.SOCKET_TIMEOUT
+    cwnd = cwndMax = 1500
+    C, B = 0.4, 0.7
 
     last = time.time()
 
@@ -109,23 +112,21 @@ def upload_file(filename: str, destination: str) -> None:
 
     while uploading:
         now = time.time()
-        if last + windowTimeout > now:
-            # send a segment
-            if len(windowToSend) > 0:
-                segmentID = windowToSend.pop(0)
-                if segmentID * singleSegmentSize <= bodySize - singleSegmentSize:
-                    # is not the last segment
-                    segment = fileBody[segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize]
-                else:
-                    # is the last segment
-                    segment = fileBody[segmentID * singleSegmentSize:]
+        if last + rtt > now and len(windowToSend) > 0 and len(windowSending) < cwnd:
+            segmentID = windowToSend.pop(0)
+            if segmentID * singleSegmentSize <= bodySize - singleSegmentSize:
+                # is not the last segment
+                segment = fileBody[segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize]
+            else:
+                # is the last segment
+                segment = fileBody[segmentID * singleSegmentSize:]
 
-                segmentPocket = Pocket(BasicLayer(requestID, PocketType.Segment))
-                segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
+            segmentPocket = Pocket(BasicLayer(requestID, PocketType.Segment))
+            segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
 
-                windowSending.append(segmentID)
+            windowSending.append(segmentID)
 
-                clientSocket.sendto(segmentPocket.to_bytes(), options.appAddress)
+            clientSocket.sendto(segmentPocket.to_bytes(), options.appAddress)
         else:
             # refresh window
             logging.debug(
@@ -136,7 +137,8 @@ def upload_file(filename: str, destination: str) -> None:
                 try:
                     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
                 except TimeoutError:
-                    timeout = True
+                    now = time.time()
+                    timeout = last + rtt < now
 
                 if not timeout:
                     pocket = Pocket.from_bytes(data)
@@ -150,12 +152,16 @@ def upload_file(filename: str, destination: str) -> None:
                             windowToSend.remove(pocket.akcLayer.segmentID)
                         if pocket.akcLayer.segmentID in windowSending:
                             windowSending.remove(pocket.akcLayer.segmentID)
-                        else:
-                            print("Error: get pocket that not ACK and not Close")
 
-            windowToSend = windowSending + windowToSend
-            windowSending = []
+            if len(windowSending) > 0:
+                windowToSend = windowSending + windowToSend
+                windowSending = []
+                cwndMax = cwnd
+                cwnd = max(cwnd / 2, 1)
+            else:
+                cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1/3)) ** 3) + cwndMax, 1)
 
+            rtt = time.time() - last
             last = time.time()
 
 

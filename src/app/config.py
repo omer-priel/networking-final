@@ -20,7 +20,7 @@ class AppConfig(Config):
     SINGLE_SEGMENT_SIZE_MIN = 10  # [byte]
     SINGLE_SEGMENT_SIZE_MAX = 1500  # [byte]
     WINDOW_TIMEOUT_MIN = 0.1  # [s]
-    WINDOW_TIMEOUT_MAX = 1.0  # [s]
+    WINDOW_TIMEOUT_MAX = 0.1  # [s]
 
 
 config = AppConfig()

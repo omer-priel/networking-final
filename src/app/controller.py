@@ -68,22 +68,22 @@ def main_loop() -> None:
                             global handlers, handlersLock
 
                             handler.locker.acquire()
-                            windowTimeout = handler.response.responseLayer.windowTimeout
                             singleSegmentSize = handler.response.responseLayer.singleSegmentSize
                             segmentsAmount = handler.response.responseLayer.segmentsAmount
                             dataSize = len(handler.data)
                             handler.locker.release()
+
+                            rtt = config.SOCKET_TIMEOUT
+                            cwnd = cwndMax = 1500
+                            C, B = 0.4, 0.7
 
                             last = time.time()
                             downloading = True
 
                             while downloading:
                                 now = time.time()
-                                if last + windowTimeout > now:
+                                if last + rtt > now and len(handler.windowToSend) > 0 and len(handler.windowSending) < cwnd:
                                     # send a segment
-                                    if len(handler.windowToSend) == 0:
-                                        time.sleep(last + windowTimeout - now)
-                                    else:
                                         segmentID = handler.windowToSend.pop(0)
                                         if segmentID * singleSegmentSize <= dataSize - singleSegmentSize:
                                             # is not the last segment
@@ -107,25 +107,37 @@ def main_loop() -> None:
                                             segmentsAmount,
                                         )
                                     )
-                                    handler.locker.acquire()
-                                    while len(handler.pockets) > 0:
-                                        pocket = handler.pockets.pop(0)
-                                        if pocket.basicLayer.pocketType == PocketType.DownloadComplited:
-                                            # complit the downloading
-                                            handler.pockets = []
-                                            downloading = False
-                                        elif pocket.akcLayer:
-                                            if pocket.akcLayer.segmentID in handler.windowToSend:
-                                                handler.windowToSend.remove(pocket.akcLayer.segmentID)
-                                            if pocket.akcLayer.segmentID in handler.windowSending:
-                                                handler.windowSending.remove(pocket.akcLayer.segmentID)
-                                            else:
-                                                logging.error("Get pocket that not ACK and not download complited")
+                                    timeout = False
+                                    while not timeout:
+                                        if len(handler.pockets) > 0:
+                                            handler.locker.acquire()
+                                            pocket = handler.pockets.pop(0)
+                                            handler.locker.release()
+                                        else:
+                                            pocket = None
+                                            now = time.time()
+                                            timeout = last + rtt < now
 
-                                    handler.locker.release()
+                                        if pocket:
+                                            if pocket.basicLayer.pocketType == PocketType.DownloadComplited:
+                                                # complit the downloading
+                                                handler.pockets = []
+                                                downloading = False
+                                            elif pocket.akcLayer:
+                                                if pocket.akcLayer.segmentID in handler.windowToSend:
+                                                    handler.windowToSend.remove(pocket.akcLayer.segmentID)
+                                                if pocket.akcLayer.segmentID in handler.windowSending:
+                                                    handler.windowSending.remove(pocket.akcLayer.segmentID)
 
-                                    handler.windowToSend = handler.windowSending + handler.windowToSend
-                                    handler.windowSending = []
+                                    if len(handler.windowSending) > 0:
+                                        handler.windowToSend = handler.windowSending + handler.windowToSend
+                                        handler.windowSending = []
+                                        cwndMax = cwnd
+                                        cwnd = max(cwnd / 2, 1)
+                                    else:
+                                        cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1/3)) ** 3) + cwndMax, 1)
+
+                                    rtt = time.time() - last
                                     last = time.time()
 
                             send_close(handler.get_client_address())
