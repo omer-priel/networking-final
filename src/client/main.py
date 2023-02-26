@@ -57,14 +57,13 @@ def upload_file(filename: str, destination: str) -> None:
         print('The file"' + filename + "\" don't exists!")
         return None
 
-    fileStream = open(filename, "r")
-
-    fileSize = os.stat(filename).st_size
+    with open(filename, "r") as f:
+        fileBody = f.read().encode()
 
     # create request pocket
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Upload))
     reqPocket.requestLayer = RequestLayer(
-        fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+        len(fileBody), MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
     )
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination)
 
@@ -82,17 +81,16 @@ def upload_file(filename: str, destination: str) -> None:
 
     if not resPocket.responseLayer:
         print("Error: faild to send the file")
-        fileStream.close()
         return None
 
     if not resPocket.responseLayer.ok:
         print("Error: " + resPocket.responseLayer.errorMessage)
-        fileStream.close()
         return None
 
     # send the file
     requestID = resPocket.basicLayer.requestID
 
+    bodyLength = len(fileBody)
     singleSegmentSize = resPocket.responseLayer.singleSegmentSize
     segmentsAmount = resPocket.responseLayer.segmentsAmount
     windowTimeout = resPocket.responseLayer.windowTimeout
@@ -110,16 +108,15 @@ def upload_file(filename: str, destination: str) -> None:
             # send a segment
             if len(windowToSend) > 0:
                 segmentID = windowToSend.pop(0)
-                fileStream.seek(segmentID * singleSegmentSize)
-                if segmentID * singleSegmentSize <= fileSize - singleSegmentSize:
+                if segmentID * singleSegmentSize <= bodyLength - singleSegmentSize:
                     # is not the last segment
-                    segment = fileStream.read(singleSegmentSize)
+                    segment = fileBody[segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize]
                 else:
                     # is the last segment
-                    segment = fileStream.read(fileSize - singleSegmentSize)
+                    segment = fileBody[segmentID * singleSegmentSize:]
 
                 segmentPocket = Pocket(BasicLayer(requestID, PocketType.Segment))
-                segmentPocket.segmentLayer = SegmentLayer(segmentID, segment.encode())
+                segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
 
                 windowSending.append(segmentID)
 
@@ -155,8 +152,6 @@ def upload_file(filename: str, destination: str) -> None:
             windowSending = []
 
             last = time.time()
-
-    fileStream.close()
 
 
 def download_file(filePath: str, destination: str):
@@ -271,10 +266,14 @@ def download_file(filePath: str, destination: str):
         except socket.error:
             pass
 
-    # create the file
-    fileStream = open(destination, "a")
+    # load body
+    fileBody = b""
     for segment in segments:
-        fileStream.write(segment.decode())
+        fileBody += segment
+
+    # create the file
+    with open(destination, "a") as f:
+        f.write(fileBody.decode())
 
     # clean up
     fileStream.close()
