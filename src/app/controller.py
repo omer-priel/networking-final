@@ -163,7 +163,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
             if not userData.password == request.requestLayer.password:
                 send_error("the password is incorrect", clientAddress)
                 return None
-
+        else:
             userData = UserData(id=str(uuid.uuid4()), password=request.requestLayer.password)
             while os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id):
                 userData.id = str(uuid.uuid4())
@@ -197,8 +197,12 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
         dataSize = len(data)
 
     if dataSize == 0:
-        res.responseLayer = ResponseLayer(True, "", 0, 0, 0)
+        res.responseLayer = ResponseLayer(True, "", 0, 0, 0, 0)
         sendto(res, clientAddress)
+
+        if handler.uploadHandler:
+            handler.post_upload(b"")
+
         return None
 
     singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, request.requestLayer.maxSingleSegmentSize)
@@ -211,7 +215,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
     windowTimeout = max(config.WINDOW_TIMEOUT_MIN, request.requestLayer.maxWindowTimeout)
     windowTimeout = min(config.WINDOW_TIMEOUT_MAX, windowTimeout)
 
-    res.responseLayer = ResponseLayer(True, "", segmentsAmount, singleSegmentSize, windowTimeout)
+    res.responseLayer = ResponseLayer(True, "", dataSize, segmentsAmount, singleSegmentSize, windowTimeout)
 
     if handler.uploadHandler:
         handler.segmentsAmount = segmentsAmount

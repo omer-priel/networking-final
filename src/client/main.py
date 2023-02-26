@@ -31,7 +31,7 @@ options: Options = Options()
 
 
 def init_app() -> None:
-    config.LOGGING_LEVEL = logging.CRITICAL
+    # config.LOGGING_LEVEL = logging.CRITICAL
 
     init_logging()
 
@@ -60,10 +60,12 @@ def upload_file(filename: str, destination: str) -> None:
     with open(filename, "r") as f:
         fileBody = f.read().encode()
 
+    bodySize = len(fileBody)
+
     # create request pocket
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Upload))
     reqPocket.requestLayer = RequestLayer(
-        len(fileBody), MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+        bodySize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
     )
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination)
 
@@ -88,9 +90,12 @@ def upload_file(filename: str, destination: str) -> None:
         return None
 
     # send the file
+    if bodySize == 0:
+        print('The file "{}" upload as "{}" to the app.'.format(filename, destination))
+        return None
+
     requestID = resPocket.basicLayer.requestID
 
-    bodyLength = len(fileBody)
     singleSegmentSize = resPocket.responseLayer.singleSegmentSize
     segmentsAmount = resPocket.responseLayer.segmentsAmount
     windowTimeout = resPocket.responseLayer.windowTimeout
@@ -108,7 +113,7 @@ def upload_file(filename: str, destination: str) -> None:
             # send a segment
             if len(windowToSend) > 0:
                 segmentID = windowToSend.pop(0)
-                if segmentID * singleSegmentSize <= bodyLength - singleSegmentSize:
+                if segmentID * singleSegmentSize <= bodySize - singleSegmentSize:
                     # is not the last segment
                     segment = fileBody[segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize]
                 else:
@@ -199,6 +204,14 @@ def download_file(filePath: str, destination: str):
         print("Error: " + resPocket.responseLayer.errorMessage)
         return None
 
+    if resPocket.responseLayer.dataSize == 0:
+        # create the file
+        with open(destination, "a") as f:
+            f.write("")
+
+        logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
+        return None
+
     # init segments for downloading
     requestID = resPocket.basicLayer.requestID
 
@@ -275,9 +288,6 @@ def download_file(filePath: str, destination: str):
     with open(destination, "a") as f:
         f.write(fileBody.decode())
 
-    # clean up
-    fileStream.close()
-
     logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
 
 
@@ -308,8 +318,8 @@ def send_list_command(directoryPath: str):
         print("Error: " + resPocket.responseLayer.errorMessage)
         return None
 
-    if resPocket.listResponseLayer.directoriesCount == 0 and resPocket.listResponseLayer.filesCount == 0:
-        print("The directory is empty")
+    if resPocket.responseLayer.dataSize == 0:
+        print_directory_content([], [])
         return None
 
     # init segments for downloading

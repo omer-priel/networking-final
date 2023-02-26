@@ -143,33 +143,34 @@ class ResponseLayer(LayerInterface):
         else:
             errorMessage = data[offset : offset + errorMessageLength].decode()
             offset += errorMessageLength
-        segmentsAmount, singleSegmentSize, windowTimeout = struct.unpack_from("LLL", data, offset)
-        return ResponseLayer(ok, errorMessage, segmentsAmount, singleSegmentSize, float(windowTimeout / 1000))
+        dataSize, segmentsAmount, singleSegmentSize, windowTimeout = struct.unpack_from("LLLL", data, offset)
+        return ResponseLayer(ok, errorMessage, dataSize, segmentsAmount, singleSegmentSize, float(windowTimeout / 1000))
 
     def __init__(
-        self, ok: bool, errorMessage: str | None, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float
+        self, ok: bool, errorMessage: str | None, dataSize: int, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float
     ) -> None:
         self.ok = ok
         if not errorMessage:
             self.errorMessage = ""
         else:
             self.errorMessage = errorMessage
+        self.dataSize = dataSize
         self.segmentsAmount = segmentsAmount
         self.singleSegmentSize = singleSegmentSize
         self.windowTimeout = windowTimeout
 
     def length(self) -> int:
-        return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LLL")
+        return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LLLL")
 
     def to_bytes(self) -> bytes:
         ret = struct.pack("?b", self.ok, len(self.errorMessage))
         ret += self.errorMessage.encode()
-        ret += struct.pack("LLL", self.segmentsAmount, self.singleSegmentSize, int(self.windowTimeout * 1000))
+        ret += struct.pack("LLLL", self.dataSize, self.segmentsAmount, self.singleSegmentSize, int(self.windowTimeout * 1000))
         return ret
 
     def __str__(self) -> str:
-        return " ok: {}, message: {}, segments: {}, size: {}, window-timeout: {} |".format(
-            self.ok, self.errorMessage, self.segmentsAmount, self.singleSegmentSize, self.windowTimeout
+        return " ok: {}, message: {}, size: {}, segments: {}, size: {}, window-timeout: {} |".format(
+            self.ok, self.errorMessage, self.dataSize, self.segmentsAmount, self.singleSegmentSize, self.windowTimeout
         )
 
 

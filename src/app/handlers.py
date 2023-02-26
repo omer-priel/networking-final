@@ -71,10 +71,6 @@ class UploadFileRequestHandler(UploadRequestHandler):
             self.send_error("The file path cannot be more then {} chars".format(config.FILE_PATH_MAX_LENGTH))
             return None
 
-        if self.request.requestLayer.pocketFullSize <= 0:
-            self.send_error("The file cannot be empty")
-            return None
-
         if not in_storage(self.request.uploadRequestLayer.path, self._storagePath):
             self.send_error("The path {} is not legal".format(self.request.uploadRequestLayer.path))
             return None

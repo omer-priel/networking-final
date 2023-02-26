@@ -46,9 +46,9 @@ Type: 1
 |---------|----------------------|--------------------------------|
 | 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes |
 
-| Segments Amount | Single Segment Size | Window Timeout |
-|-----------------|---------------------|----------------|
-| 8 Bytes         | 8 Bytes             | 8 Bytes        |
+| Data Size | Segments Amount | Single Segment Size | Window Timeout |
+|-----------|-----------------|---------------------|----------------|
+| 8 Bytes   | 8 Bytes         | 8 Bytes             | 8 Bytes        |
 
 Type: 2
 
