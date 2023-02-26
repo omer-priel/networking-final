@@ -1,10 +1,11 @@
 # entry point to DHCP
 
-from src.lib.config import config
+from src.dhcp.config import config, init_config, init_logging
 
 
 def main() -> None:
-    print("Hello World DHCP")
+    init_config()
+    init_logging()
 
 
 if __name__ == "__main__":
