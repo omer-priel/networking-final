@@ -50,7 +50,7 @@ start-app:
 	PYTHONPATH=. poetry run python src/app/main.py
 
 start-dhcp:
-	PYTHONPATH=. poetry run python src/dhcp/main.py
+	sudo ./.venv/bin/python3 src/dhcp/main.py
 
 start-dns:
 	PYTHONPATH=. poetry run python src/dns/main.py
@@ -223,3 +223,6 @@ test-client-list-user-recursive:
 	PYTHONPATH=. poetry run python src/client/main.py --user bar list --recursive
 
 test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found
+
+test-send-dhcp-discover:
+	sudo nmap --script broadcast-dhcp-discover
