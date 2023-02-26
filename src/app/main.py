@@ -50,8 +50,8 @@ def init_strorage() -> None:
 
     if not os.path.isfile(config.APP_STORAGE_PATH + config.STORAGE_DATA):
         storageData = StorageData()
-        with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "a") as outputFile:
-            outputFile.write(storageData.json())
+        with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "a") as f:
+            f.write(storageData.json())
 
 
 def get_path(path: str, storagePath: str) -> str:
@@ -63,14 +63,14 @@ def in_storage(path: str, storagePath: str) -> bool:
 
 
 # RUDP
-currentPocketID = 0
+lastRequestID = 0
 
 
-def create_current_pocketID() -> int:
-    global currentPocketID
-    currentPocketID += 1
+def create_new_requestID() -> int:
+    global lastRequestID
+    lastRequestID += 1
 
-    return currentPocketID
+    return lastRequestID
 
 
 def create_socket() -> None:
@@ -166,7 +166,7 @@ class UploadFileRequestHandler(UploadRequestHandler):
             self.send_error("The path {} is not legal".format(self.request.uploadRequestLayer.path))
             return None
 
-        self.requestID = create_current_pocketID()
+        self.requestID = create_new_requestID()
         res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.Upload))
         return (res, None)
 
@@ -211,7 +211,7 @@ class DownloadFileRequestHandler(DownloadRequestHandler):
         with open(filePath, "r") as f:
             data = f.read().encode()
 
-        self.requestID = create_current_pocketID()
+        self.requestID = create_new_requestID()
         res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.Download))
         return (res, data)
 
@@ -254,7 +254,7 @@ class ListRequestHandler(DownloadRequestHandler):
 
             data += pack_file_block(fileName, updatedAt, fileSize)
 
-        self.requestID = create_current_pocketID()
+        self.requestID = create_new_requestID()
         res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.List))
         res.listResponseLayer = ListResponseLayer(len(directories), len(files))
         return (res, data)
@@ -279,7 +279,7 @@ def main_loop() -> None:
             pocket = Pocket.from_bytes(data)
 
         for key in notReady:
-            if data and not key == pocket.get_id():
+            if data and not key == pocket.basicLayer.requestID:
                 appSocket.sendto(notReady[key], handlers[key].get_requestID())
 
         if data:
@@ -293,8 +293,8 @@ def main_loop() -> None:
                     handlersLock.acquire()
                     handlers[handler.get_requestID()] = handler
                     handlersLock.release()
-            elif pocket.get_id() in handlers:
-                handler = handlers[pocket.get_id()]
+            elif pocket.basicLayer.requestID in handlers:
+                handler = handlers[pocket.basicLayer.requestID]
                 if handler.uploadHandler:
                     if not handle_upload_pocket(handler, pocket):
                         handlersLock.acquire()
@@ -389,8 +389,8 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
             send_error("The user name cannot be empty", clientAddress)
             return None
 
-        with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "r") as dataFile:
-            storageData = StorageData(**json.load(dataFile))
+        with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "r") as f:
+            storageData = StorageData(**json.load(f))
 
         # check if the user not exists
         userData = storageData.users.get(request.requestLayer.userName)
@@ -407,8 +407,8 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
             os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id)
             storageData.users[request.requestLayer.userName] = userData
 
-            with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "w") as dataFile:
-                dataFile.write(storageData.json())
+            with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "w") as f:
+                f.write(storageData.json())
 
         storagePath = config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id  + "/"
 

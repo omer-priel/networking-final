@@ -21,7 +21,7 @@ Every Request / Response are made from Base Layer and the content layer
 
 #### Basic Layer
 
-|   Type  |  Sub Type  | Packet ID |
+|   Type  |  Sub Type  | Request ID |
 |---------|------------|-----------|
 | 1 Bytes | 1 Bytes    | 8 Bytes   |
 

@@ -42,17 +42,17 @@ class LayerInterface(ABC):
 class BasicLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> BasicLayer:
-        pocketType, pocketSubType, pocketID = struct.unpack_from("bbL", data, offset)
+        pocketType, pocketSubType, requestID = struct.unpack_from("bbL", data, offset)
         return BasicLayer(
-            pocketID,
+            requestID,
             PocketType(pocketType),
             PocketSubType(pocketSubType),
         )
 
-    def __init__(self, pocketID: int, pocketType=PocketType.Unknown, pocketSubType=PocketType.Unknown) -> None:
+    def __init__(self, requestID: int, pocketType=PocketType.Unknown, pocketSubType=PocketType.Unknown) -> None:
         self.pocketType = pocketType
         self.pocketSubType = pocketSubType
-        self.pocketID = pocketID
+        self.requestID = requestID
 
     def length(self) -> int:
         return struct.calcsize("bbL")
@@ -62,11 +62,11 @@ class BasicLayer(LayerInterface):
             "bbL",
             self.pocketType,
             self.pocketSubType,
-            self.pocketID,
+            self.requestID,
         )
 
     def __str__(self) -> str:
-        return "| type: {}, sub-type: {}, id: {} |".format(self.pocketType, self.pocketSubType, self.pocketID)
+        return "| type: {}, sub-type: {}, id: {} |".format(self.pocketType, self.pocketSubType, self.requestID)
 
 
 class RequestLayer(LayerInterface):
@@ -364,8 +364,6 @@ class Pocket:
         self.listRequestLayer: ListRequestLayer | None = None
         self.listResponseLayer: ListResponseLayer | None = None
 
-    def get_id(self):
-        return self.basicLayer.pocketID
 
     def to_bytes(self) -> bytes:
         data = self.basicLayer.to_bytes()
