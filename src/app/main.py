@@ -66,7 +66,7 @@ def in_storage(path: str, storagePath: str) -> bool:
 currentPocketID = 0
 
 
-def create_current_pocketID(f) -> int:
+def create_current_pocketID() -> int:
     global currentPocketID
     currentPocketID += 1
 
@@ -277,12 +277,12 @@ def main_loop() -> None:
 
         if data:
             pocket = Pocket.from_bytes(data)
-        
+
         for key in notReady:
             if data and not key == pocket.get_id():
                 appSocket.sendto(notReady[key], handlers[key].get_requestID())
 
-        if data:            
+        if data:
             if pocket.basicLayer.pocketType == PocketType.Request:
                 result = create_handler(pocket, clientAddress)
                 if result:
@@ -304,7 +304,7 @@ def main_loop() -> None:
                     if not handler.ready:
                         handler.ready = True
                         notReady.pop(handler.get_requestID())
-                       
+
                         def downloading_task(handler: DownloadRequestHandler):
                             global handlers, handlersLock
 
@@ -369,7 +369,7 @@ def main_loop() -> None:
                             handlersLock.acquire()
                             handlers.pop(handler.get_requestID())
                             handlersLock.release()
-                       
+
                         executor.submit(downloading_task, handler)
                     else:
                         handler.locker.acquire()
@@ -399,7 +399,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
             if not userData.password == request.requestLayer.password:
                 send_error("the password is incorrect", clientAddress)
                 return None
-            
+
             userData = UserData(id=str(uuid.uuid4()), password=request.requestLayer.password)
             while os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id):
                 userData.id = str(uuid.uuid4())
@@ -424,14 +424,14 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
     result = handler.route()
     if not result:
         return None
-    
+
     res, data = result
 
     if handler.uploadHandler:
         dataSize = request.requestLayer.pocketFullSize
     else:
         dataSize = len(data)
-    
+
     if dataSize == 0:
         res.responseLayer = ResponseLayer(True, "", 0, 0, 0)
         appSocket.sendto(res.to_bytes(), clientAddress)
@@ -481,10 +481,10 @@ def handle_upload_pocket(handler: UploadRequestHandler, pocket: Pocket) -> bool:
                 data += handler.segments[key]
 
             send_close(handler.get_client_address())
-            
+
             handler.post_upload(data)
             return False
-        
+
     return True
 
 
