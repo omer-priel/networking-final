@@ -1,10 +1,10 @@
 # entry point to Application
 
 import logging
-import sys
 import os
 import os.path
 import socket
+import sys
 import time
 
 from prettytable import PrettyTable
@@ -118,7 +118,7 @@ def upload_file(filename: str, destination: str) -> None:
                 segment = fileBody[segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize]
             else:
                 # is the last segment
-                segment = fileBody[segmentID * singleSegmentSize:]
+                segment = fileBody[segmentID * singleSegmentSize :]
 
             segmentPocket = Pocket(BasicLayer(requestID, PocketType.Segment))
             segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
@@ -158,7 +158,7 @@ def upload_file(filename: str, destination: str) -> None:
                 cwndMax = cwnd
                 cwnd = max(cwnd / 2, 1)
             else:
-                cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1/3)) ** 3) + cwndMax, 1)
+                cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1)
 
             rtt = time.time() - last
             last = time.time()
@@ -185,9 +185,7 @@ def download_file(filePath: str, destination: str):
 
     # send download request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Download))
-    reqPocket.requestLayer = RequestLayer(
-        0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password
-    )
+    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
     reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -299,9 +297,7 @@ def download_file(filePath: str, destination: str):
 def send_list_command(directoryPath: str, recursive: bool):
     # send list request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.List))
-    reqPocket.requestLayer = RequestLayer(
-        0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password
-    )
+    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
     reqPocket.listRequestLayer = ListRequestLayer(directoryPath, recursive)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -420,7 +416,6 @@ def print_directory_content(data: bytes) -> None:
         else:
             (fileName, updatedAt, fileSize), offset = unpack_file_block(data, offset)
             table.add_row(["", fileName, time.ctime(updatedAt), fileSize])
-
 
     print(table)
 

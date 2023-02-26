@@ -164,7 +164,9 @@ class ListRequestHandler(DownloadRequestHandler):
 
             data += pack_directory_block(parent + directoryName, updatedAt)
             if recursive:
-                data += self.load_directory(directoryPath + "/" + directoryName, parent + directoryName + "/", recursive)
+                data += self.load_directory(
+                    directoryPath + "/" + directoryName, parent + directoryName + "/", recursive
+                )
 
         for fileName in files:
             updatedAt = os.path.getmtime(directoryPath + "/" + fileName)
@@ -173,4 +175,3 @@ class ListRequestHandler(DownloadRequestHandler):
             data += pack_file_block(parent + fileName, updatedAt, fileSize)
 
         return data
-

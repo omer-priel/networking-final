@@ -34,8 +34,10 @@ def create_socket() -> None:
 def sendto(pocket: Pocket, clientAddress: tuple[str, int]) -> None:
     appSocket.sendto(pocket.to_bytes(), clientAddress)
 
+
 def recvfrom() -> tuple[bytes | None, tuple[str, int]]:
     return appSocket.recvfrom(config.SOCKET_MAXSIZE)
+
 
 def send_close(clientAddress: tuple[str, int]) -> None:
     closePocket = Pocket(BasicLayer(0, PocketType.Close))

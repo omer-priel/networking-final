@@ -6,8 +6,8 @@ import os
 import os.path
 import socket
 import threading
-import uuid
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from src.app.handlers import *
@@ -82,23 +82,27 @@ def main_loop() -> None:
 
                             while downloading:
                                 now = time.time()
-                                if last + rtt > now and len(handler.windowToSend) > 0 and len(handler.windowSending) < cwnd:
+                                if (
+                                    last + rtt > now
+                                    and len(handler.windowToSend) > 0
+                                    and len(handler.windowSending) < cwnd
+                                ):
                                     # send a segment
-                                        segmentID = handler.windowToSend.pop(0)
-                                        if segmentID * singleSegmentSize <= dataSize - singleSegmentSize:
-                                            # is not the last segment
-                                            segment = handler.data[
-                                                segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize
-                                            ]
-                                        else:
-                                            # is the last segment
-                                            segment = handler.data[segmentID * singleSegmentSize :]
+                                    segmentID = handler.windowToSend.pop(0)
+                                    if segmentID * singleSegmentSize <= dataSize - singleSegmentSize:
+                                        # is not the last segment
+                                        segment = handler.data[
+                                            segmentID * singleSegmentSize : (segmentID + 1) * singleSegmentSize
+                                        ]
+                                    else:
+                                        # is the last segment
+                                        segment = handler.data[segmentID * singleSegmentSize :]
 
-                                        segmentPocket = Pocket(BasicLayer(handler.get_requestID(), PocketType.Segment))
-                                        segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
+                                    segmentPocket = Pocket(BasicLayer(handler.get_requestID(), PocketType.Segment))
+                                    segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
 
-                                        handler.windowSending.append(segmentID)
-                                        sendto(segmentPocket, clientAddress)
+                                    handler.windowSending.append(segmentID)
+                                    sendto(segmentPocket, clientAddress)
                                 else:
                                     # refresh window
                                     logging.debug(
@@ -135,7 +139,7 @@ def main_loop() -> None:
                                         cwndMax = cwnd
                                         cwnd = max(cwnd / 2, 1)
                                     else:
-                                        cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1/3)) ** 3) + cwndMax, 1)
+                                        cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1)
 
                                     rtt = time.time() - last
                                     last = time.time()

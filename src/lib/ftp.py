@@ -73,9 +73,7 @@ class BasicLayer(LayerInterface):
 class RequestLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> RequestLayer:
-        pocketFullSize, maxSingleSegmentSize, anonymous, userNameLength = struct.unpack_from(
-            "LL?I", data, offset
-        )
+        pocketFullSize, maxSingleSegmentSize, anonymous, userNameLength = struct.unpack_from("LL?I", data, offset)
         offset += struct.calcsize("LL?I")
         userName = ""
         password = ""
@@ -90,9 +88,7 @@ class RequestLayer(LayerInterface):
                 password = data[offset : offset + passwordLength].decode()
                 offset += passwordLength
 
-        return RequestLayer(
-            pocketFullSize, maxSingleSegmentSize, anonymous, userName, password
-        )
+        return RequestLayer(pocketFullSize, maxSingleSegmentSize, anonymous, userName, password)
 
     def __init__(
         self,
@@ -291,7 +287,12 @@ def unpack_block_type(data: bytes, offset: int) -> tuple[bool, int]:
 
 
 def pack_directory_block(directoryName: str, updatedAt: float) -> bytes:
-    return struct.pack("?", True) + struct.pack("I", len(directoryName)) + directoryName.encode() + struct.pack("d", updatedAt)
+    return (
+        struct.pack("?", True)
+        + struct.pack("I", len(directoryName))
+        + directoryName.encode()
+        + struct.pack("d", updatedAt)
+    )
 
 
 def unpack_directory_block(data: bytes, offset: int) -> tuple[tuple[str, float], int]:
@@ -309,7 +310,12 @@ def unpack_directory_block(data: bytes, offset: int) -> tuple[tuple[str, float],
 
 
 def pack_file_block(fileName: str, updatedAt: float, fileSize: int) -> bytes:
-    return struct.pack("?", False) + struct.pack("I", len(fileName)) + fileName.encode() + struct.pack("dL", updatedAt, fileSize)
+    return (
+        struct.pack("?", False)
+        + struct.pack("I", len(fileName))
+        + fileName.encode()
+        + struct.pack("dL", updatedAt, fileSize)
+    )
 
 
 def unpack_file_block(data: bytes, offset: int) -> tuple[tuple[str, float, int], int]:
