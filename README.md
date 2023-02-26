@@ -137,7 +137,6 @@ and list of files
 |-------------|-----------------------|------------|------------|
 | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
-
 ## Links
 
 * Python Struct: <https://docs.python.org/3.7/library/struct.html>
