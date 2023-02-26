@@ -6,6 +6,8 @@ import socket
 from src.app.config import config
 from src.lib.ftp import *
 
+# globals
+appSocket: socket.socket
 lastRequestID = 0
 
 
@@ -29,13 +31,19 @@ def create_socket() -> None:
     logging.info("The app socket initialized on " + config.APP_HOST + ":" + str(config.APP_PORT))
 
 
+def sendto(pocket: Pocket, clientAddress: tuple[str, int]) -> None:
+    appSocket.sendto(pocket.to_bytes(), clientAddress)
+
+def recvfrom() -> tuple[bytes | None, tuple[str, int]]:
+    return appSocket.recvfrom(config.SOCKET_MAXSIZE)
+
 def send_close(clientAddress: tuple[str, int]) -> None:
     closePocket = Pocket(BasicLayer(0, PocketType.Close))
-    appSocket.sendto(closePocket.to_bytes(), clientAddress)
+    sendto(closePocket, clientAddress)
 
 
 def send_error(errorMessage: str, clientAddress: tuple[str, int]) -> None:
     logging.error(errorMessage)
-    resPocket = Pocket(BasicLayer(0, PocketType.Response))
-    resPocket.responseLayer = ResponseLayer(False, errorMessage, 0, 0, 0)
-    appSocket.sendto(resPocket.to_bytes(), clientAddress)
+    response = Pocket(BasicLayer(0, PocketType.Response))
+    response.responseLayer = ResponseLayer(False, errorMessage, 0, 0, 0)
+    sendto(response, clientAddress)

@@ -16,7 +16,6 @@ from src.app.storage import *
 from src.lib.ftp import *
 
 # globals
-appSocket: socket.socket
 executor = ThreadPoolExecutor(2)
 
 # dict of handlers for the requests
@@ -31,7 +30,7 @@ def main_loop() -> None:
     notReady: dict[int, Pocket] = {}
     while True:
         try:
-            data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
+            data, clientAddress = recvfrom()
         except socket.error:
             data = None
 
@@ -40,7 +39,7 @@ def main_loop() -> None:
 
         for key in notReady:
             if data and not key == pocket.basicLayer.requestID:
-                appSocket.sendto(notReady[key], handlers[key].get_requestID())
+                sendto(notReady[key], handlers[key].get_client_address())
 
         if data:
             if pocket.basicLayer.pocketType == PocketType.Request:
@@ -99,7 +98,7 @@ def main_loop() -> None:
                                         segmentPocket.segmentLayer = SegmentLayer(segmentID, segment)
 
                                         handler.windowSending.append(segmentID)
-                                        appSocket.sendto(segmentPocket.to_bytes(), clientAddress)
+                                        sendto(segmentPocket, clientAddress)
                                 else:
                                     # refresh window
                                     logging.debug(
@@ -199,7 +198,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
 
     if dataSize == 0:
         res.responseLayer = ResponseLayer(True, "", 0, 0, 0)
-        appSocket.sendto(res.to_bytes(), clientAddress)
+        sendto(res, clientAddress)
         return None
 
     singleSegmentSize = max(config.SINGLE_SEGMENT_SIZE_MIN, request.requestLayer.maxSingleSegmentSize)
@@ -222,7 +221,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
         handler.windowSending = []
         handler.response = res
 
-    appSocket.sendto(res.to_bytes(), clientAddress)
+    sendto(res, clientAddress)
     return (handler, res)
 
 
@@ -237,7 +236,7 @@ def handle_upload_pocket(handler: UploadRequestHandler, pocket: Pocket) -> bool:
 
         akcPocket = Pocket(BasicLayer(handler.get_requestID(), PocketType.ACK))
         akcPocket.akcLayer = AKCLayer(segmentID)
-        appSocket.sendto(akcPocket.to_bytes(), handler.get_client_address())
+        sendto(akcPocket, handler.get_client_address())
 
         if len(handler.segments) == handler.segmentsAmount:
             # upload all
