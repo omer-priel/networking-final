@@ -14,26 +14,25 @@ TODO
 Every Request / Response are made from Base Layer and the content layer
 
 * Upload
-  Auth with Packet
-* List
 * Download
+* List
 
 ### RUDP Level
 
 #### Basic Layer
 
-|   Type  |  Sub Type  | Packet ID |
-|---------|------------|-----------|
-| 1 Bytes | 1 Bytes    | 8 Bytes   |
+|   Type  |  Sub Type  | Request ID |
+|---------|------------|------------|
+| 1 Bytes | 1 Bytes    | 8 Bytes    |
 
 * Type:     type of RUDP layer
 * Sub type: type of the application layer, the defualt is 0
 
-#### Auth Layer
+#### Request Layer
 
-| Full Pocket Size | Max Single Segment Size | Max Window Timeout |
-|------------------|-------------------------|--------------------|
-| 8 Bytes          | 8 Bytes                 | 8 Bytes            |
+| Full Pocket Size | Max Single Segment Size |
+|------------------|-------------------------|
+| 8 Bytes          | 8 Bytes                 |
 
 | Anonymous | User Name Length |         User Name          | Password Length |         Password           |
 |-----------|------------------|----------------------------|-----------------|----------------------------|
@@ -41,19 +40,23 @@ Every Request / Response are made from Base Layer and the content layer
 
 Type: 1
 
-#### Auth Response Layer
+#### Response Layer
 
 | OK      | Error Message Length |         Error Message          |
 |---------|----------------------|--------------------------------|
 | 1 Bytes | 1 Bytes              | (Error Message Length) * Bytes |
 
-| Segments Amount | Single Segment Size | Window Timeout |
-|-----------------|---------------------|----------------|
-| 8 Bytes         | 8 Bytes             | 8 Bytes        |
+| Data Size | Segments Amount | Single Segment Size |
+|-----------|-----------------|---------------------|
+| 8 Bytes   | 8 Bytes         | 8 Bytes             |
 
 Type: 2
 
 * If Segments Amount is 0 then, not exists ACK's and Close pockets
+
+#### Ready For Downloading
+
+Type: 3
 
 #### Segment Layer
 
@@ -61,7 +64,7 @@ Type: 2
 |------------|--------------|----------------------|
 | 8 Bytes    | 8 Bytes      | Segment Size * Bytes |
 
-Type: 3
+Type: 4
 
 #### AKC Layer
 
@@ -69,11 +72,15 @@ Type: 3
 |------------|
 | 8 Bytes    |
 
-Type: 4
+Type: 5
+
+#### Download Complited
+
+Type: 6
 
 #### Close (FIN)
 
-Type: 5
+Type: 7
 
 ### FTP Level
 
@@ -83,23 +90,11 @@ Type: 5
 |-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
-Type: Auth Layer
-Sub Type: 1
+Type: Request Layer
 Path: path of the file on the server
 
 * If the file exists, delete it
 * Create the file
-
-#### Upload Response
-
-Type: Auth Response Layer
-Sub Type: 2
-
-### Upload Response Segment
-
-Type: Segment Layer
-Sub Type: 3
-Data: segment of the file
 
 #### Download Request Layer
 
@@ -107,79 +102,34 @@ Data: segment of the file
 |-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
-Type: Auth Layer
-Sub Type: 4
+Type: Request Layer
 Path: path of the file on the server
 
 * Can't download file that dos not exists
 
-#### Download Response
-
-Type: Auth Response Layer
-Sub Type: 5
-
-### Download Ready For Downloading
-
-Type: AKC Layer
-Sub Type: 6
-
-### Download Response Segment
-
-Type: Segment Layer
-Sub Type: 7
-Data: segment of the file
-
-### Download Complited
-
-Type: AKC Layer
-Sub Type: 8
-
 #### List Request Layer
 
-| Path Length |         Path          |
-|-------------|-----------------------|
-| 4 Bytes     | (Path Length) * Bytes |
+| Path Length |         Path          | Recursive |
+|-------------|-----------------------|-----------|
+| 4 Bytes     | (Path Length) * Bytes | 1 Byte    |
 
-Type: Auth Layer
-Sub Type: 9
+Type: Request Layer
 Path: path of the directory (folder) on the server
 
-#### List Response Layer
-
-|  Directories Count |  Files Count |
-|--------------------|--------------|
-| 8 Bytes            | 8 Bytes      |
-
-Type: Auth Response Layer
-Sub Type: 10
-
-### List Ready For Downloading
-
-Type: AKC Layer
-Sub Type: 11
-
-### List Segment
+#### List Data
 
 The full combine segments is:
-list of directories
+list of directories and files, when directory present
 
-| Name Length |         Name          | Updated At |
-|-------------|-----------------------|------------|
-| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    |
+| Is Directory - 1 | Name Length |         Name          | Updated At |
+|------------------|-------------|-----------------------|------------|
+| 1 Byte           | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    |
 
-and list of files
+and file is
 
-| Name Length |         Name          | Updated At | File Size  |
-|-------------|-----------------------|------------|------------|
-| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
-
-Type: Segment Layer
-Sub Type: 12
-
-### List Complited
-
-Type: AKC Layer
-Sub Type: 13
+| Is Directory - 0 | Name Length |         Name          | Updated At | File Size  |
+|------------------|-------------|-----------------------|------------|------------|
+| 1 Byte           | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
 ## Links
 
