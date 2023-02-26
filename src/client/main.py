@@ -17,6 +17,7 @@ clientSocket: socket.socket
 MAX_SEGMENT_SIZE = 1000  # [byte]
 MAX_WINDOW_TIMEOUT = 1  # [s]
 
+
 class Options:
     def __init__(self) -> None:
         self.clientAddress: tuple[str, int] = ("localhost", 8001)
@@ -27,6 +28,7 @@ class Options:
 
 
 options: Options = Options()
+
 
 def init_app() -> None:
     config.LOGGING_LEVEL = logging.CRITICAL
@@ -61,7 +63,9 @@ def upload_file(filename: str, destination: str) -> None:
 
     # create request pocket
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Upload))
-    reqPocket.requestLayer = RequestLayer(fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
+    reqPocket.requestLayer = RequestLayer(
+        fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+    )
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination)
 
     # send request
@@ -176,7 +180,9 @@ def download_file(filePath: str, destination: str):
 
     # send download request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Download))
-    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
+    reqPocket.requestLayer = RequestLayer(
+        0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+    )
     reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -234,9 +240,7 @@ def download_file(filePath: str, destination: str):
                 data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
                 segmentPocket = Pocket.from_bytes(data)
 
-            if (not segmentPocket.segmentLayer) or (
-                not segmentPocket.basicLayer.pocketType == PocketType.Segment
-            ):
+            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketType == PocketType.Segment):
                 logging.error("Get pocket that is not download segment")
             else:
                 segmentID = segmentPocket.segmentLayer.segmentID
@@ -281,7 +285,9 @@ def download_file(filePath: str, destination: str):
 def send_list_command(directoryPath: str):
     # send list request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.List))
-    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
+    reqPocket.requestLayer = RequestLayer(
+        0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password
+    )
     reqPocket.listRequestLayer = ListRequestLayer(directoryPath)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -416,7 +422,7 @@ def print_directory_content(files: list, directories: list) -> None:
 
 
 def print_help():
-    print("client is CLI client for custom app like \"FTP\" based on UDP.")
+    print('client is CLI client for custom app like "FTP" based on UDP.')
     print("  client --help                               - print the help content")
     print("  client [options] upload [--dest <destination>] <file> - upload file")
     print("  client [options] download <remote file> [destination] - download file")
@@ -428,6 +434,7 @@ def print_help():
     print("--port <port> - set the server port, defualt: 8000")
     print("--client-host <host> - set the client host address, defualt: localhost")
     print("--client-port <port> - set the client port, defualt: 8001")
+
 
 def main() -> None:
     global options

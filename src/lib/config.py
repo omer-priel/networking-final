@@ -2,6 +2,7 @@
 
 import logging
 
+
 class Config:
     FILE_PATH_MAX_LENGTH = 256
 
@@ -11,6 +12,7 @@ class Config:
 
 
 config = Config()
+
 
 def init_logging() -> None:
     logging.basicConfig(level=config.LOGGING_LEVEL, format="%(asctime)s %(levelname)s: %(message)s", datefmt="%H:%M:%S")

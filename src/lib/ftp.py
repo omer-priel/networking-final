@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 import struct
-import time
-from enum import IntEnum
 from abc import ABC, abstractclassmethod
+from enum import IntEnum
 
 # struct link: https://docs.python.org/3.7/library/struct.html
+
 
 # Types
 class PocketType(IntEnum):
@@ -26,6 +26,7 @@ class PocketSubType(IntEnum):
     Upload = 1
     Download = 2
     List = 3
+
 
 # Layer Interface
 class LayerInterface(ABC):
@@ -72,7 +73,9 @@ class BasicLayer(LayerInterface):
 class RequestLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> RequestLayer:
-        pocketFullSize, maxSingleSegmentSize, maxWindowTimeout, anonymous, userNameLength = struct.unpack_from("LLL?I", data, offset)
+        pocketFullSize, maxSingleSegmentSize, maxWindowTimeout, anonymous, userNameLength = struct.unpack_from(
+            "LLL?I", data, offset
+        )
         offset += struct.calcsize("LLL?I")
         userName = ""
         password = ""
@@ -81,15 +84,25 @@ class RequestLayer(LayerInterface):
                 userName = data[offset : offset + userNameLength].decode()
                 offset += userNameLength
 
-            passwordLength =  struct.unpack_from("I", data, offset)[0]
+            passwordLength = struct.unpack_from("I", data, offset)[0]
             offset += struct.calcsize("I")
             if passwordLength > 0:
                 password = data[offset : offset + passwordLength].decode()
                 offset += passwordLength
 
-        return RequestLayer(pocketFullSize, maxSingleSegmentSize, float(maxWindowTimeout / 1000), anonymous, userName, password)
+        return RequestLayer(
+            pocketFullSize, maxSingleSegmentSize, float(maxWindowTimeout / 1000), anonymous, userName, password
+        )
 
-    def __init__(self, pocketFullSize: int, maxSingleSegmentSize: int, maxWindowTimeout: float, anonymous: bool, userName: str, password: str) -> None:
+    def __init__(
+        self,
+        pocketFullSize: int,
+        maxSingleSegmentSize: int,
+        maxWindowTimeout: float,
+        anonymous: bool,
+        userName: str,
+        password: str,
+    ) -> None:
         self.pocketFullSize = pocketFullSize
         self.maxSingleSegmentSize = maxSingleSegmentSize
         self.maxWindowTimeout = maxWindowTimeout
@@ -101,7 +114,14 @@ class RequestLayer(LayerInterface):
         return struct.calcsize("LLL?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
 
     def to_bytes(self) -> bytes:
-        ret = struct.pack("LLL?I", self.pocketFullSize, self.maxSingleSegmentSize, int(self.maxWindowTimeout * 1000), self.anonymous, len(self.userName))
+        ret = struct.pack(
+            "LLL?I",
+            self.pocketFullSize,
+            self.maxSingleSegmentSize,
+            int(self.maxWindowTimeout * 1000),
+            self.anonymous,
+            len(self.userName),
+        )
         ret += self.userName.encode()
         ret += struct.pack("I", len(self.password))
         ret += self.password.encode()
@@ -126,7 +146,9 @@ class ResponseLayer(LayerInterface):
         segmentsAmount, singleSegmentSize, windowTimeout = struct.unpack_from("LLL", data, offset)
         return ResponseLayer(ok, errorMessage, segmentsAmount, singleSegmentSize, float(windowTimeout / 1000))
 
-    def __init__(self, ok: bool, errorMessage: str | None, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float) -> None:
+    def __init__(
+        self, ok: bool, errorMessage: str | None, segmentsAmount: int, singleSegmentSize: int, windowTimeout: float
+    ) -> None:
         self.ok = ok
         if not errorMessage:
             self.errorMessage = ""
@@ -363,7 +385,6 @@ class Pocket:
         self.downloadRequestLayer: DownloadRequestLayer | None = None
         self.listRequestLayer: ListRequestLayer | None = None
         self.listResponseLayer: ListResponseLayer | None = None
-
 
     def to_bytes(self) -> bytes:
         data = self.basicLayer.to_bytes()
