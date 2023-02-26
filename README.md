@@ -22,8 +22,8 @@ Every Request / Response are made from Base Layer and the content layer
 #### Basic Layer
 
 |   Type  |  Sub Type  | Request ID |
-|---------|------------|-----------|
-| 1 Bytes | 1 Bytes    | 8 Bytes   |
+|---------|------------|------------|
+| 1 Bytes | 1 Bytes    | 8 Bytes    |
 
 * Type:     type of RUDP layer
 * Sub type: type of the application layer, the defualt is 0
@@ -109,33 +109,27 @@ Path: path of the file on the server
 
 #### List Request Layer
 
-| Path Length |         Path          |
-|-------------|-----------------------|
-| 4 Bytes     | (Path Length) * Bytes |
+| Path Length |         Path          | Recursive |
+|-------------|-----------------------|-----------|
+| 4 Bytes     | (Path Length) * Bytes | 1 Byte    |
 
 Type: Request Layer
 Path: path of the directory (folder) on the server
 
-#### List Response Layer
-
-|  Directories Count |  Files Count |
-|--------------------|--------------|
-| 8 Bytes            | 8 Bytes      |
-
-Type: Response Layer
+#### List Data
 
 The full combine segments is:
-list of directories
+list of directories and files, when directory present
 
-| Name Length |         Name          | Updated At |
-|-------------|-----------------------|------------|
-| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    |
+| Is Directory - 1 | Name Length |         Name          | Updated At |
+|------------------|-------------|-----------------------|------------|
+| 1 Byte           | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    |
 
-and list of files
+and file is
 
-| Name Length |         Name          | Updated At | File Size  |
-|-------------|-----------------------|------------|------------|
-| 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
+| Is Directory - 0 | Name Length |         Name          | Updated At | File Size  |
+|------------------|-------------|-----------------------|------------|------------|
+| 1 Byte           | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
 ## Links
 

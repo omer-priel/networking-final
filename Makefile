@@ -185,6 +185,9 @@ test-client-download-user-multi:
 test-client-list:
 	PYTHONPATH=. poetry run python src/client/main.py list
 
+test-client-list-recursive:
+	PYTHONPATH=. poetry run python src/client/main.py list --recursive
+
 test-client-list-child:
 	PYTHONPATH=. poetry run python src/client/main.py list child-dir
 
@@ -214,5 +217,9 @@ test-client-list-user-multi:
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list a
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list b
+
+test-client-list-user-recursive:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list --recursive
+	PYTHONPATH=. poetry run python src/client/main.py --user bar list --recursive
 
 test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found

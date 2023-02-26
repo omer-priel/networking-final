@@ -142,6 +142,13 @@ class ListRequestHandler(DownloadRequestHandler):
             return None
 
         # load the content
+        data = self.load_directory(directoryPath, "", self.request.listRequestLayer.recursive)
+
+        self.requestID = create_new_requestID()
+        res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.List))
+        return (res, data)
+
+    def load_directory(self, directoryPath: str, parent: str, recursive: bool) -> bytes:
         directoriesAndFiles = os.listdir(directoryPath)
         directories = [directory for directory in directoriesAndFiles if os.path.isdir(directoryPath + "/" + directory)]
         files = [file for file in directoriesAndFiles if os.path.isfile(directoryPath + "/" + file)]
@@ -155,15 +162,15 @@ class ListRequestHandler(DownloadRequestHandler):
         for directoryName in directories:
             updatedAt = os.path.getmtime(directoryPath + "/" + directoryName)
 
-            data += pack_directory_block(directoryName, updatedAt)
+            data += pack_directory_block(parent + directoryName, updatedAt)
+            if recursive:
+                data += self.load_directory(directoryPath + "/" + directoryName, parent + directoryName + "/", recursive)
 
         for fileName in files:
             updatedAt = os.path.getmtime(directoryPath + "/" + fileName)
             fileSize = os.stat(directoryPath + "/" + fileName).st_size
 
-            data += pack_file_block(fileName, updatedAt, fileSize)
+            data += pack_file_block(parent + fileName, updatedAt, fileSize)
 
-        self.requestID = create_new_requestID()
-        res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.List))
-        res.listResponseLayer = ListResponseLayer(len(directories), len(files))
-        return (res, data)
+        return data
+

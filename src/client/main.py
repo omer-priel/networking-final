@@ -30,7 +30,7 @@ options: Options = Options()
 
 
 def init_app() -> None:
-    # config.LOGGING_LEVEL = logging.CRITICAL
+    config.LOGGING_LEVEL = logging.CRITICAL
 
     init_logging()
 
@@ -296,13 +296,13 @@ def download_file(filePath: str, destination: str):
     logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
 
 
-def send_list_command(directoryPath: str):
+def send_list_command(directoryPath: str, recursive: bool):
     # send list request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.List))
     reqPocket.requestLayer = RequestLayer(
         0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password
     )
-    reqPocket.listRequestLayer = ListRequestLayer(directoryPath)
+    reqPocket.listRequestLayer = ListRequestLayer(directoryPath, recursive)
 
     logging.debug("send req pocket: " + str(reqPocket))
 
@@ -399,48 +399,38 @@ def send_list_command(directoryPath: str):
     for segment in segments:
         data += segment
 
-    # load the directory content
-    directories = []
-    files = []
-
-    i = 0
-    offset = 0
-    while i < resPocket.listResponseLayer.directoriesCount:
-        directoryInfo, offset = unpack_directory_block(data, offset)
-        directories.append(directoryInfo)
-        i += 1
-
-    i = 0
-    while i < resPocket.listResponseLayer.filesCount:
-        fileInfo, offset = unpack_file_block(data, offset)
-        files.append(fileInfo)
-        i += 1
-
     # print the directory content
-    print_directory_content(files, directories)
+    print_directory_content(data)
 
 
-def print_directory_content(files: list, directories: list) -> None:
+def print_directory_content(data: bytes) -> None:
     # create printed table
     table = PrettyTable()
 
     table.field_names = ["", "Name", "Updated At", "Size"]
+    table.align["Name"] = "l"
 
     # print content
-    for directoryName, updatedAt in directories:
-        table.add_row(["dir", directoryName, time.ctime(updatedAt), ""])
-    for fileName, updatedAt, fileSize in files:
-        table.add_row(["", fileName, time.ctime(updatedAt), fileSize])
+    offset = 0
+    while offset < len(data):
+        isDirectory, offset = unpack_block_type(data, offset)
+        if isDirectory:
+            (directoryName, updatedAt), offset = unpack_directory_block(data, offset)
+            table.add_row(["dir", directoryName, time.ctime(updatedAt), ""])
+        else:
+            (fileName, updatedAt, fileSize), offset = unpack_file_block(data, offset)
+            table.add_row(["", fileName, time.ctime(updatedAt), fileSize])
+
 
     print(table)
 
 
 def print_help():
     print('client is CLI client for custom app like "FTP" based on UDP.')
-    print("  client --help                               - print the help content")
-    print("  client [options] upload [--dest <destination>] <file> - upload file")
-    print("  client [options] download <remote file> [destination] - download file")
-    print("  client [options] list [remote directory]              - print directory content")
+    print("  client --help                                          - print the help content")
+    print("  client [options] upload [--dest <destination>] <file>  - upload file")
+    print("  client [options] download <remote file> [destination]  - download file")
+    print("  client [options] list [remote directory] [--recursive] - print directory content")
     print("Options:")
     print("--user <user name>    - set user name")
     print("--password <password> - set user password, require --user")
@@ -557,13 +547,19 @@ def main() -> None:
         download_file(filePath, destination)
 
     elif sys.argv[i] == "list":
-        if len(sys.argv) == i + 1:
-            directoryPath = "."
-        else:
-            directoryPath = sys.argv[i + 1]
+        recursive = False
+        directoryPath = "."
+
+        i += 1
+        while i < len(sys.argv):
+            if sys.argv[i] == "--recursive":
+                recursive = True
+            else:
+                directoryPath = sys.argv[i]
+            i += 1
 
         create_socket()
-        send_list_command(directoryPath)
+        send_list_command(directoryPath, recursive)
     else:
         print('The command "{}" not exists'.format(sys.argv[i]))
 
