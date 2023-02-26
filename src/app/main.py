@@ -64,19 +64,11 @@ def in_storage(path: str, storagePath: str) -> bool:
 
 # RUDP
 currentPocketID = 0
-nextPocketID = False
 
 
-def get_current_pocketID() -> int:
-    return currentPocketID
-
-
-def create_current_pocketID(forNextRequest=False) -> int:
-    global currentPocketID, nextPocketID
-    if not nextPocketID:
-        currentPocketID += 1
-
-    nextPocketID = forNextRequest
+def create_current_pocketID(f) -> int:
+    global currentPocketID
+    currentPocketID += 1
 
     return currentPocketID
 
@@ -104,18 +96,6 @@ def send_error(errorMessage: str, clientAddress: Any) -> None:
         resPocket = Pocket(BasicLayer(0, PocketType.Response))
         resPocket.responseLayer = ResponseLayer(False, errorMessage, 0, 0, 0)
         appSocket.sendto(resPocket.to_bytes(), clientAddress)
-
-
-def recv_pocket() -> Pocket:
-    try:
-        while True:
-            data, clientAddress = appSocket.recvfrom(config.SOCKET_MAXSIZE)
-            pocket = Pocket.from_bytes(data)
-            if pocket.get_id() == get_current_pocketID():
-                return pocket
-            send_close(clientAddress)
-    except socket.error as ex:
-        raise ex
 
 
 class RequestHandler(ABC):
