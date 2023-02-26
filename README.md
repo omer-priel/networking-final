@@ -14,9 +14,8 @@ TODO
 Every Request / Response are made from Base Layer and the content layer
 
 * Upload
-  Auth with Packet
-* List
 * Download
+* List
 
 ### RUDP Level
 
@@ -29,7 +28,7 @@ Every Request / Response are made from Base Layer and the content layer
 * Type:     type of RUDP layer
 * Sub type: type of the application layer, the defualt is 0
 
-#### Auth Layer
+#### Request Layer
 
 | Full Pocket Size | Max Single Segment Size | Max Window Timeout |
 |------------------|-------------------------|--------------------|
@@ -41,7 +40,7 @@ Every Request / Response are made from Base Layer and the content layer
 
 Type: 1
 
-#### Auth Response Layer
+#### Response Layer
 
 | OK      | Error Message Length |         Error Message          |
 |---------|----------------------|--------------------------------|
@@ -55,13 +54,17 @@ Type: 2
 
 * If Segments Amount is 0 then, not exists ACK's and Close pockets
 
+#### Ready For Downloading
+
+Type: 3
+
 #### Segment Layer
 
 | Segment ID | Segment Size |         Data         |
 |------------|--------------|----------------------|
 | 8 Bytes    | 8 Bytes      | Segment Size * Bytes |
 
-Type: 3
+Type: 4
 
 #### AKC Layer
 
@@ -69,11 +72,15 @@ Type: 3
 |------------|
 | 8 Bytes    |
 
-Type: 4
+Type: 5
+
+#### Download Complited
+
+Type: 6
 
 #### Close (FIN)
 
-Type: 5
+Type: 7
 
 ### FTP Level
 
@@ -83,17 +90,11 @@ Type: 5
 |-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
-Type: Auth Layer
-Sub Type: 1
+Type: Request Layer
 Path: path of the file on the server
 
 * If the file exists, delete it
 * Create the file
-
-#### Upload Response
-
-Type: Auth Response Layer
-Sub Type: 2
 
 #### Download Request Layer
 
@@ -101,26 +102,10 @@ Sub Type: 2
 |-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
-Type: Auth Layer
-Sub Type: 3
+Type: Request Layer
 Path: path of the file on the server
 
 * Can't download file that dos not exists
-
-#### Download Response
-
-Type: Auth Response Layer
-Sub Type: 4
-
-### Download Ready For Downloading
-
-Type: AKC Layer
-Sub Type: 5
-
-### Download Complited
-
-Type: AKC Layer
-Sub Type: 6
 
 #### List Request Layer
 
@@ -128,8 +113,7 @@ Sub Type: 6
 |-------------|-----------------------|
 | 4 Bytes     | (Path Length) * Bytes |
 
-Type: Auth Layer
-Sub Type: 7
+Type: Request Layer
 Path: path of the directory (folder) on the server
 
 #### List Response Layer
@@ -138,8 +122,7 @@ Path: path of the directory (folder) on the server
 |--------------------|--------------|
 | 8 Bytes            | 8 Bytes      |
 
-Type: Auth Response Layer
-Sub Type: 8
+Type: Response Layer
 
 The full combine segments is:
 list of directories
@@ -154,15 +137,6 @@ and list of files
 |-------------|-----------------------|------------|------------|
 | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
-### List Ready For Downloading
-
-Type: AKC Layer
-Sub Type: 9
-
-### List Complited
-
-Type: AKC Layer
-Sub Type: 10
 
 ## Links
 

@@ -60,8 +60,8 @@ def upload_file(filename: str, destination: str) -> None:
     fileSize = os.stat(filename).st_size
 
     # create request pocket
-    reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.UploadRequest))
-    reqPocket.authLayer = AuthLayer(fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
+    reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Upload))
+    reqPocket.requestLayer = RequestLayer(fileSize, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.uploadRequestLayer = UploadRequestLayer(destination)
 
     # send request
@@ -76,22 +76,22 @@ def upload_file(filename: str, destination: str) -> None:
     # handle response
     logging.debug("get res pocket: " + str(resPocket))
 
-    if not resPocket.authResponseLayer:
+    if not resPocket.responseLayer:
         print("Error: faild to send the file")
         fileStream.close()
         return None
 
-    if not resPocket.authResponseLayer.ok:
-        print("Error: " + resPocket.authResponseLayer.errorMessage)
+    if not resPocket.responseLayer.ok:
+        print("Error: " + resPocket.responseLayer.errorMessage)
         fileStream.close()
         return None
 
     # send the file
     pocketID = resPocket.basicLayer.pocketID
 
-    singleSegmentSize = resPocket.authResponseLayer.singleSegmentSize
-    segmentsAmount = resPocket.authResponseLayer.segmentsAmount
-    windowTimeout = resPocket.authResponseLayer.windowTimeout
+    singleSegmentSize = resPocket.responseLayer.singleSegmentSize
+    segmentsAmount = resPocket.responseLayer.segmentsAmount
+    windowTimeout = resPocket.responseLayer.windowTimeout
 
     windowToSend = list(range(segmentsAmount))
     windowSending = []
@@ -175,8 +175,8 @@ def download_file(filePath: str, destination: str):
     os.remove(destination)
 
     # send download request
-    reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.DownloadRequest))
-    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
+    reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Download))
+    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -190,24 +190,24 @@ def download_file(filePath: str, destination: str):
     # handel response
     logging.debug("get res pocket: " + str(resPocket))
 
-    if not resPocket.authResponseLayer:
+    if not resPocket.responseLayer:
         print("Error: faild to download the file")
         return None
 
-    if not resPocket.authResponseLayer.ok:
-        print("Error: " + resPocket.authResponseLayer.errorMessage)
+    if not resPocket.responseLayer.ok:
+        print("Error: " + resPocket.responseLayer.errorMessage)
         return None
 
     # init segments for downloading
     pocketID = resPocket.basicLayer.pocketID
 
-    segmentsAmount = resPocket.authResponseLayer.segmentsAmount
+    segmentsAmount = resPocket.responseLayer.segmentsAmount
 
     neededSegments = list(range(segmentsAmount))
     segments = [b""] * segmentsAmount
 
     # send ack for start downloading
-    readyPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.DownloadReadyForDownloading))
+    readyPocket = Pocket(BasicLayer(pocketID, PocketType.ReadyForDownloading))
     readyPocket.akcLayer = AKCLayer(0)
 
     logging.debug("send ready ack pocket: " + str(readyPocket))
@@ -253,8 +253,7 @@ def download_file(filePath: str, destination: str):
 
     # send complited download pocket to knowning the app that the file complited
     # until recive close pocket
-    complitedPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.DownloadComplited))
-    complitedPocket.akcLayer = AKCLayer(0)
+    complitedPocket = Pocket(BasicLayer(pocketID, PocketType.DownloadComplited))
 
     closed = False
 
@@ -281,8 +280,8 @@ def download_file(filePath: str, destination: str):
 
 def send_list_command(directoryPath: str):
     # send list request
-    reqPocket = Pocket(BasicLayer(0, PocketType.Auth, PocketSubType.ListRequest))
-    reqPocket.authLayer = AuthLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
+    reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.List))
+    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, MAX_WINDOW_TIMEOUT, options.anonymous, options.userName, options.password)
     reqPocket.listRequestLayer = ListRequestLayer(directoryPath)
 
     logging.debug("send req pocket: " + str(reqPocket))
@@ -296,12 +295,12 @@ def send_list_command(directoryPath: str):
     # handle response
     logging.debug("get res pocket: " + str(resPocket))
 
-    if not resPocket.authResponseLayer or not resPocket.listResponseLayer:
+    if not resPocket.responseLayer:
         print("Error: the list request faild")
         return None
 
-    if not resPocket.authResponseLayer.ok:
-        print("Error: " + resPocket.authResponseLayer.errorMessage)
+    if not resPocket.responseLayer.ok:
+        print("Error: " + resPocket.responseLayer.errorMessage)
         return None
 
     if resPocket.listResponseLayer.directoriesCount == 0 and resPocket.listResponseLayer.filesCount == 0:
@@ -311,14 +310,13 @@ def send_list_command(directoryPath: str):
     # init segments for downloading
     pocketID = resPocket.basicLayer.pocketID
 
-    segmentsAmount = resPocket.authResponseLayer.segmentsAmount
+    segmentsAmount = resPocket.responseLayer.segmentsAmount
 
     neededSegments = list(range(segmentsAmount))
     segments = [b""] * segmentsAmount
 
     # send ack for start downloading
-    readyPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.ListReadyForDownloading))
-    readyPocket.akcLayer = AKCLayer(0)
+    readyPocket = Pocket(BasicLayer(pocketID, PocketType.ReadyForDownloading))
 
     logging.debug("send ready ack pocket: " + str(readyPocket))
 
@@ -344,9 +342,7 @@ def send_list_command(directoryPath: str):
                 data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
                 segmentPocket = Pocket.from_bytes(data)
 
-            if (not segmentPocket.segmentLayer) or (
-                not segmentPocket.basicLayer.pocketSubType == PocketType.Segment
-            ):
+            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketType == PocketType.Segment):
                 logging.error("Get pocket that is not list segment")
             else:
                 segmentID = segmentPocket.segmentLayer.segmentID
@@ -363,7 +359,7 @@ def send_list_command(directoryPath: str):
 
     # send complited list pocket to knowning the app that the list download complited
     # until recive close pocket
-    complitedPocket = Pocket(BasicLayer(pocketID, PocketType.ACK, PocketSubType.ListComplited))
+    complitedPocket = Pocket(BasicLayer(pocketID, PocketType.DownloadComplited))
     complitedPocket.akcLayer = AKCLayer(0)
 
     closed = False
