@@ -223,15 +223,3 @@ test-client-list-user-recursive:
 	PYTHONPATH=. poetry run python src/client/main.py --user bar list --recursive
 
 test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found
-
-dhcp-show-apps-on-68:
-	sudo lsof -i -P -n | grep :68
-
-dhcp-kill-dhclient:
-	sudo killall dhclient
-
-dhcp-remove-ip:
-	sudo dhclient -r
-
-dhcp-renew:
-	sudo dhclient
