@@ -60,43 +60,39 @@ class DHCPParameterRequest(IntEnum):
 
         return DHCPParameterRequest(value)
 
+
 DHCPOptionValue = bytes | MessageType | str | int | list[DHCPParameterRequest]
 
+
 class DHCPPacket:
-    def __init__(self, data: bytes) -> None:
+    def from_bytes(data: bytes) -> DHCPPacket:
         offset = 0
 
-        self.op, self.htype, self.hlen, self.hops = data[offset : offset + 4]
+        op, htype, hlen, hops = data[offset : offset + 4]
         offset += 4
 
-        self.xid = struct.unpack_from("I", data, offset)[0]
+        xid, secs, flags = struct.unpack_from("IHH", data, offset)
+        offset += 8
+
+        clientIPAddress = socket.inet_ntoa(data[offset : offset + 4])
+        offset += 4
+        yourIPAddress = socket.inet_ntoa(data[offset : offset + 4])
+        offset += 4
+        serverIPAddress = socket.inet_ntoa(data[offset : offset + 4])
+        offset += 4
+        relayIPAddress = socket.inet_ntoa(data[offset : offset + 4])
         offset += 4
 
-        self.secs, self.flags = struct.unpack_from("HH", data, offset)
-        offset += 4
-
-        self.clientIPAddress = socket.inet_ntoa(data[offset : offset + 4])
-        offset += 4
-
-        self.yourIPAddress = socket.inet_ntoa(data[offset : offset + 4])
-        offset += 4
-
-        self.serverIPAddress = socket.inet_ntoa(data[offset : offset + 4])
-        offset += 4
-
-        self.relayIPAddress = socket.inet_ntoa(data[offset : offset + 4])
-        offset += 4
-
-        self.clientEthernetAddress = data[offset : offset + 16]
+        clientEthernetAddress = data[offset : offset + 16]
         offset += 16
 
         # 192 octets of 0s, or overflow space for additional options; BOOTP legacy.
         offset += 192
 
-        self.magicCookie = struct.unpack_from("I", data, offset)[0]
+        magicCookie = struct.unpack_from("I", data, offset)[0]
         offset += 4
 
-        self.options: dict[DHCPOptionKey, DHCPOptionValue] = {}
+        options: dict[DHCPOptionKey, DHCPOptionValue] = {}
 
         while offset + 1 < len(data) and int(data[offset]) != int(DHCPOptionKey.End):
             optionKey = int(data[offset])
@@ -108,9 +104,88 @@ class DHCPPacket:
                 if optionLength > 0:
                     optionValue = data[offset : offset + optionLength]
 
-                self.options[optionKey] = bytes2dhcpOptionValue(optionKey, optionValue)
+                options[optionKey] = bytes2dhcpOptionValue(optionKey, optionValue)
 
             offset += optionLength
+
+        return DHCPPacket(
+            op=op,
+            htype=htype,
+            hlen=hlen,
+            hops=hops,
+            xid=xid,
+            secs=secs,
+            flags=flags,
+            clientIPAddress=clientIPAddress,
+            yourIPAddress=yourIPAddress,
+            serverIPAddress=serverIPAddress,
+            relayIPAddress=relayIPAddress,
+            clientEthernetAddress=clientEthernetAddress,
+            magicCookie=magicCookie,
+            options=options,
+        )
+
+    def __init__(
+        self,
+        op: int,
+        htype: int,
+        hlen: int,
+        hops: int,
+        xid: int,
+        secs: int,
+        flags: int,
+        clientIPAddress: str,
+        yourIPAddress: str,
+        serverIPAddress: str,
+        relayIPAddress: str,
+        clientEthernetAddress: bytes,
+        magicCookie: int,
+        options: dict[DHCPOptionKey, DHCPOptionValue],
+    ) -> None:
+        self.op = op
+        self.htype = htype
+        self.hlen = hlen
+        self.hops = hops
+
+        self.xid = xid
+        self.secs = secs
+        self.flags = flags
+
+        self.clientIPAddress = clientIPAddress
+        self.yourIPAddress = yourIPAddress
+        self.serverIPAddress = serverIPAddress
+        self.relayIPAddress = relayIPAddress
+
+        self.clientEthernetAddress = clientEthernetAddress
+        self.magicCookie = magicCookie
+
+        self.options = options
+
+    def __bytes__(self) -> bytes:
+        data = bytes([self.op, self.htype, self.hlen, self.hops])
+        data += struct.pack("IHH", self.xid, self.secs, self.flags)
+
+        data += socket.inet_aton(self.clientIPAddress)
+        data += socket.inet_aton(self.yourIPAddress)
+        data += socket.inet_aton(self.serverIPAddress)
+        data += socket.inet_aton(self.relayIPAddress)
+
+        data += self.clientEthernetAddress
+
+        # 192 octets of 0s, or overflow space for additional options; BOOTP legacy.
+        data += b"" * 192
+
+        data += struct.pack("I", self.magicCookie)
+
+        for key in self.options:
+            if not key == DHCPOptionKey.End and not key == DHCPOptionKey.Padding:
+                optionAsData = dhcpOptionValue2bytes(key, self.options[key])
+                data += struct.pack("BB", int(key), len(optionAsData))
+                data += optionAsData
+
+        data += struct.pack("BB", int(DHCPOptionKey.End), 0)
+
+        return data
 
     def __repr__(self) -> str:
         return "| op: {}, htype: {}, hlen: {}, hops: {}, xid: {}, secs: {}, flags: {},  client: {}, your: {}, server: {}, relay: {}, clientEthernetAddress: {}, magic-cookie: {}, options: {} |".format(
@@ -131,18 +206,35 @@ class DHCPPacket:
         )
 
 
-def bytes2dhcpOptionValue(key: DHCPOptionKey, value: bytes) -> DHCPOptionValue:
+def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
     if key == DHCPOptionKey.MessageType:
-        return MessageType.from_value(struct.unpack("B", value)[0])
+        return MessageType.from_value(struct.unpack("B", data)[0])
 
     if key == DHCPOptionKey.RequestedIPAddress:
-        return socket.inet_ntoa(value)
+        return socket.inet_ntoa(data)
 
     if key == DHCPOptionKey.End:
-        return value.decode()
+        return data.decode()
 
     if key == DHCPOptionKey.ParamterRequestList:
-        arr = [DHCPParameterRequest.from_value(item) for item in list(value)]
+        arr = [DHCPParameterRequest.from_value(item) for item in list(data)]
         return list(set(sorted(arr)))
+
+    return data
+
+
+def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
+    if key == DHCPOptionKey.MessageType:
+        return struct.pack("B", int(value))
+
+    if key == DHCPOptionKey.RequestedIPAddress:
+        return socket.inet_aton(value)
+
+    if key == DHCPOptionKey.End:
+        return value.encode()
+
+    if key == DHCPOptionKey.ParamterRequestList:
+        arr = [int(item) for item in value if int(item) != 0]
+        return bytes(arr)
 
     return value

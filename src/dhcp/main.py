@@ -55,7 +55,7 @@ def main_loop() -> None:
             continue
 
         if reqType == MessageType.Discover:
-            print("Discover\nDiscover")
+            pass
 
 
 def main() -> None:
