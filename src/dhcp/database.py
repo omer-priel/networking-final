@@ -4,6 +4,8 @@ import json
 import os
 import os.path
 
+import jsbeautifier
+
 from pydantic import BaseModel
 
 from src.dhcp.config import config
@@ -43,4 +45,6 @@ def save_database() -> None:
     os.makedirs(os.path.dirname(databasePath), exist_ok=True)
 
     with open(databasePath, "a") as f:
-        f.write(database.json())
+        opts = jsbeautifier.default_options()
+        opts.indent_size = 2
+        f.write(jsbeautifier.beautify(database.json(), opts))

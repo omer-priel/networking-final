@@ -45,7 +45,7 @@ def main_loop() -> None:
         if not data:
             continue
 
-        pocket = DHCPPacket.from_bytes(pocket)
+        pocket = DHCPPacket.from_bytes(data)
         print(pocket)
         print(bytes(pocket))
 
