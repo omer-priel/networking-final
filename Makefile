@@ -224,5 +224,14 @@ test-client-list-user-recursive:
 
 test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found
 
-test-send-dhcp-discover:
-	sudo nmap --script broadcast-dhcp-discover
+dhcp-show-apps-on-68:
+	sudo lsof -i -P -n | grep :68
+
+dhcp-kill-dhclient:
+	sudo killall dhclient
+
+dhcp-remove-ip:
+	sudo dhclient -r
+
+dhcp-renew:
+	sudo dhclient

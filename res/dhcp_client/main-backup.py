@@ -9,7 +9,7 @@ from multiprocessing import Process
 import psutil
 from getmac import get_mac_address
 
-from scapy.all import AsyncSniffer, Packet
+from scapy.all import Packet, AsyncSniffer, sniff, PacketList
 from scapy.layers.dhcp import Ether, IP, UDP, BOOTP, DHCP, sendp
 
 from src.lib.config import config
@@ -18,7 +18,9 @@ def get_address() -> dict[str, tuple[str, str]]:
     addresses: dict[str, tuple[str, str]] = {}
 
     nics = psutil.net_if_addrs()
+
     for nicsName in nics:
+        addresses[nicsName] = ("78:2b:46:10:2e:c1", "0.0.0.0")
         for item in nics[nicsName]:
             if item.family == socket.AddressFamily.AF_INET:
                 addresses[nicsName] = (get_mac_address(interface=nicsName), item.address)
@@ -45,10 +47,9 @@ def send_dhcp_discover(client_mac: str, iface: str):
 
 def sniffer_handler(packet: Packet):
     print(packet)
-    packet.display()
 
-    bootpLayer: BOOTP = packet.getlayer(3)
-    dhcpLayer: DHCP = packet.getlayer(4)
+    bootpLayer: BOOTP = packet[BOOTP]
+    dhcpLayer: DHCP = packet[DHCP]
 
     options = {}
 
@@ -63,31 +64,33 @@ def sniffer_handler(packet: Packet):
 
     if options["message-type"] == 2:
         # DHCP Offer packet
-        fields = ['subnet_mask', 'router', 'name_server']
+        packet.display()
+
+        print("IP: {}".format(bootpLayer.yiaddr))
+
+        fields = ['subnet_mask', 'router']
         for field in fields:
             if field not in options:
                 print("The field {} is missing!".format(field))
                 return None
 
-        subnetMask, gatway, dns = options['subnet_mask'], options['router'], options['name_server']
+        subnetMask, gatway = options['subnet_mask'], options['router']
+        dns = None
+        if 'name_server' in options:
+            dns = options['name_server']
 
         print("IP: {}, Mask: {}, Gatway: {}, DNS: {}".format(bootpLayer.yiaddr, subnetMask, gatway, dns))
 
 def main() -> None:
+    iface, client_mac, = "wlp0s20f3", "78:2b:46:10:2e:c1"
 
-    sniffer = AsyncSniffer(prn=sniffer_handler, filter="udp port 67", store=False)
+    send_dhcp_discover(client_mac, iface)
 
-    addresses = get_address()
-    for iface in addresses:
-        mac_address, ip_address = addresses[iface]
+    while True:
+        packets: PacketList = sniff(count=1, filter="udp port 68")
+        packet: Packet = packets.res[0]
 
-        print(iface, mac_address, ip_address)
-
-        sniffer.start()
-        send_dhcp_discover(mac_address, iface)
-        time.sleep(5)
-        sniffer.stop()
-
+        sniffer_handler(packet)
 
 if __name__ == "__main__":
     main()
