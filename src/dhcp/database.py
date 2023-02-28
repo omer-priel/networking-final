@@ -1,5 +1,6 @@
 # database
 
+import json
 import os
 import os.path
 
@@ -8,35 +9,38 @@ from pydantic import BaseModel
 from src.dhcp.config import config
 
 
-class StorageData(BaseModel):
-    dns: str
-    router: str
-    subnetMask: str
+class Database(BaseModel):
+    dns: str = "0.0.0.0"
+    router: str = "0.0.0.0"
+    subnetMask: str = "255.255.255.0"
 
-    ips: dict[str] = {}
-
-
-def init_strorage() -> None:
-    if not os.path.isdir(config.APP_STORAGE_PATH):
-        os.mkdir(config.APP_STORAGE_PATH)
-
-    if not os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PUBLIC):
-        os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PUBLIC)
-
-    if not os.path.isdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE):
-        os.mkdir(config.APP_STORAGE_PATH + config.STORAGE_PRIVATE)
-
-    if not os.path.isfile(config.APP_STORAGE_PATH + config.STORAGE_DATA):
-        storageData = StorageData()
-        with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "a") as f:
-            f.write(storageData.json())
+    ips: list[str] = []
 
 
-def get_path(path: str, storagePath: str) -> str:
-    return storagePath + path
+# global
+database: Database
 
 
-def in_storage(path: str, storagePath: str) -> bool:
-    return os.path.commonpath(
-        [os.path.abspath(get_path(path, storagePath)), os.path.abspath(storagePath)]
-    ) == os.path.abspath(storagePath)
+def init_database() -> None:
+    global database
+
+    databasePath = os.path.abspath(config.DATABASE_PATH)
+
+    if os.path.isfile(databasePath):
+        with open(databasePath, "r") as f:
+            database = Database(**json.load(f))
+    else:
+        database = Database()
+        save_database()
+
+
+def save_database() -> None:
+    databasePath = os.path.abspath(config.DATABASE_PATH)
+
+    if os.path.isfile(databasePath):
+        os.remove(databasePath)
+
+    os.makedirs(os.path.dirname(databasePath), exist_ok=True)
+
+    with open(databasePath, "a") as f:
+        f.write(database.json())

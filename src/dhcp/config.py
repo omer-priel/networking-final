@@ -11,7 +11,7 @@ class AppConfig(Config):
     SERVER_PORT: int = 67
     CLIENT_PORT: int = 68
 
-    STORAGE_DATA = "/storage/dhcp.json"
+    DATABASE_PATH = "storage/dhcp.json"
 
 
 config = AppConfig()

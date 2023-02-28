@@ -4,6 +4,7 @@ import logging
 import socket
 
 from src.dhcp.config import config, init_config, init_logging
+from src.dhcp.database import init_database, save_database
 from src.dhcp.packets import *
 
 # globals
@@ -44,8 +45,9 @@ def main_loop() -> None:
         if not data:
             continue
 
-        pocket = DHCPPacket(data)
+        pocket = DHCPPacket.from_bytes(pocket)
         print(pocket)
+        print(bytes(pocket))
 
         if DHCPOptionKey.MessageType not in pocket.options:
             continue
@@ -61,6 +63,7 @@ def main_loop() -> None:
 def main() -> None:
     init_config()
     init_logging()
+    init_database()
 
     create_socket()
 
