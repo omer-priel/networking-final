@@ -9,10 +9,10 @@ install:
 	poetry install
 
 clean:
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
+	find . -name '*.pyc' -exec sudo rm -f {} +
+	find . -name '*.pyo' -exec sudo rm -f {} +
+	find . -name '*~' -exec sudo rm -f {} +
+	find . -name '__pycache__' -exec sudo rm -fr {} +
 	sudo rm -rf temp storage
 
 clean-all: clean

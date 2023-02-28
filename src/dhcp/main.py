@@ -4,7 +4,7 @@ import logging
 import socket
 
 from src.dhcp.config import config, init_config, init_logging
-from src.dhcp.database import init_database, save_database
+from src.dhcp.database import get_database, save_database, Database
 from src.dhcp.packets import *
 
 # globals
@@ -28,13 +28,13 @@ def create_socket() -> None:
     senderSocket.bind(("0.0.0.0", config.CLIENT_PORT))
 
     logging.info(
-        "The dhcp socket initialized on {} from port {} to {}".format(
-            config.SERVER_HOST, config.SERVER_PORT, config.CLIENT_PORT
+        "The dhcp socket initialized from port {} to {}".format(
+            config.SERVER_PORT, config.CLIENT_PORT
         )
     )
 
 
-def main_loop() -> None:
+def main_loop(database: Database) -> None:
     while True:
         try:
             data, clientAddress = receiverSocket.recvfrom(config.SOCKET_MAXSIZE)
@@ -47,7 +47,6 @@ def main_loop() -> None:
 
         pocket = DHCPPacket.from_bytes(data)
         print(pocket)
-        print(bytes(pocket))
 
         if DHCPOptionKey.MessageType not in pocket.options:
             continue
@@ -57,17 +56,41 @@ def main_loop() -> None:
             continue
 
         if reqType == MessageType.Discover:
-            pass
+            returnDNS = False
+            if DHCPOptionKey.ParamterRequestList in pocket.options:
+                returnDNS = DHCPParameterRequest.DomainNameServer in pocket.options[DHCPOptionKey.ParamterRequestList]
+
+            # yourIPAddress
+            yourIPAddress = "0.0.0.0"
+
+            # response
+            pocket.op = 2
+            pocket.clientIPAddress = "0.0.0.0"
+            pocket.yourIPAddress = yourIPAddress
+            pocket.serverIPAddress = database.dhcp_server
+            pocket.gatewayIPAddress = "0.0.0.0"
+
+            pocket.options = {}
+            pocket.options[DHCPOptionKey.MessageType] = MessageType.Offer
+            pocket.options[DHCPOptionKey.SubnetMask] = database.subnet_mask
+            pocket.options[DHCPOptionKey.Router] = database.router
+            pocket.options[DHCPOptionKey.DHCPServer] = database.dhcp_server
+            if returnDNS:
+                pocket.options[DHCPOptionKey.DomainNameServers] = database.dns
+
+            senderSocket.sendto(bytes(pocket), clientAddress)
+
 
 
 def main() -> None:
     init_config()
     init_logging()
-    init_database()
+
+    database = get_database()
 
     create_socket()
 
-    main_loop()
+    main_loop(database)
 
 
 if __name__ == "__main__":

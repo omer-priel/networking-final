@@ -7,7 +7,6 @@ from src.lib.config import init_logging as base_init_logging
 
 
 class AppConfig(Config):
-    SERVER_HOST: str = "localhost"
     SERVER_PORT: int = 67
     CLIENT_PORT: int = 68
 

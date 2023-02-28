@@ -14,8 +14,11 @@ class DHCPOptionKey(IntEnum):
     End = 255
     MessageType = 53
     RequestedIPAddress = 50
-    HostName = 12
     ParamterRequestList = 55
+    SubnetMask = 1
+    Router = 3
+    DomainNameServers = 6
+    DHCPServer = 54
 
     @staticmethod
     def has_value(value: int) -> bool:
@@ -61,7 +64,7 @@ class DHCPParameterRequest(IntEnum):
         return DHCPParameterRequest(value)
 
 
-DHCPOptionValue = bytes | MessageType | str | int | list[DHCPParameterRequest]
+DHCPOptionValue = bytes | str | int | MessageType | list[DHCPParameterRequest] | list[str]
 
 
 class DHCPPacket:
@@ -80,7 +83,7 @@ class DHCPPacket:
         offset += 4
         serverIPAddress = socket.inet_ntoa(data[offset : offset + 4])
         offset += 4
-        relayIPAddress = socket.inet_ntoa(data[offset : offset + 4])
+        gatewayIPAddress = socket.inet_ntoa(data[offset : offset + 4])
         offset += 4
 
         clientEthernetAddress = data[offset : offset + 16]
@@ -119,7 +122,7 @@ class DHCPPacket:
             clientIPAddress=clientIPAddress,
             yourIPAddress=yourIPAddress,
             serverIPAddress=serverIPAddress,
-            relayIPAddress=relayIPAddress,
+            gatewayIPAddress=gatewayIPAddress,
             clientEthernetAddress=clientEthernetAddress,
             magicCookie=magicCookie,
             options=options,
@@ -137,7 +140,7 @@ class DHCPPacket:
         clientIPAddress: str,
         yourIPAddress: str,
         serverIPAddress: str,
-        relayIPAddress: str,
+        gatewayIPAddress: str,
         clientEthernetAddress: bytes,
         magicCookie: int,
         options: dict[DHCPOptionKey, DHCPOptionValue],
@@ -154,7 +157,7 @@ class DHCPPacket:
         self.clientIPAddress = clientIPAddress
         self.yourIPAddress = yourIPAddress
         self.serverIPAddress = serverIPAddress
-        self.relayIPAddress = relayIPAddress
+        self.gatewayIPAddress = gatewayIPAddress
 
         self.clientEthernetAddress = clientEthernetAddress
         self.magicCookie = magicCookie
@@ -168,7 +171,7 @@ class DHCPPacket:
         data += socket.inet_aton(self.clientIPAddress)
         data += socket.inet_aton(self.yourIPAddress)
         data += socket.inet_aton(self.serverIPAddress)
-        data += socket.inet_aton(self.relayIPAddress)
+        data += socket.inet_aton(self.gatewayIPAddress)
 
         data += self.clientEthernetAddress
 
@@ -199,7 +202,7 @@ class DHCPPacket:
             self.clientIPAddress,
             self.yourIPAddress,
             self.serverIPAddress,
-            self.relayIPAddress,
+            self.gatewayIPAddress,
             self.clientEthernetAddress,
             self.magicCookie,
             self.options,
@@ -210,15 +213,15 @@ def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
     if key == DHCPOptionKey.MessageType:
         return MessageType.from_value(struct.unpack("B", data)[0])
 
-    if key == DHCPOptionKey.RequestedIPAddress:
+    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer]:
         return socket.inet_ntoa(data)
-
-    if key == DHCPOptionKey.End:
-        return data.decode()
 
     if key == DHCPOptionKey.ParamterRequestList:
         arr = [DHCPParameterRequest.from_value(item) for item in list(data)]
         return list(set(sorted(arr)))
+
+    if key == DHCPOptionKey.DomainNameServers:
+        pass
 
     return data
 
@@ -227,11 +230,8 @@ def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
     if key == DHCPOptionKey.MessageType:
         return struct.pack("B", int(value))
 
-    if key == DHCPOptionKey.RequestedIPAddress:
+    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer]:
         return socket.inet_aton(value)
-
-    if key == DHCPOptionKey.End:
-        return value.encode()
 
     if key == DHCPOptionKey.ParamterRequestList:
         arr = [int(item) for item in value if int(item) != 0]

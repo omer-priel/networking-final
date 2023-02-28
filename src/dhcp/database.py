@@ -12,20 +12,16 @@ from src.dhcp.config import config
 
 
 class Database(BaseModel):
-    dns: str = "0.0.0.0"
+    dns: list[str] = ["8.8.8.8", "8.8.4.4"]
     router: str = "0.0.0.0"
-    subnetMask: str = "255.255.255.0"
+    subnet_mask: str = "255.255.255.0"
+    dhcp_server: str = "0.0.0.0"
 
     ips: list[str] = []
 
 
 # global
-database: Database
-
-
-def init_database() -> None:
-    global database
-
+def get_database() -> Database:
     databasePath = os.path.abspath(config.DATABASE_PATH)
 
     if os.path.isfile(databasePath):
@@ -33,10 +29,12 @@ def init_database() -> None:
             database = Database(**json.load(f))
     else:
         database = Database()
-        save_database()
+        save_database(database)
+
+    return database
 
 
-def save_database() -> None:
+def save_database(database: Database) -> None:
     databasePath = os.path.abspath(config.DATABASE_PATH)
 
     if os.path.isfile(databasePath):
