@@ -85,6 +85,9 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
     logging.info("Recive Request")
 
     if not handle_request_validation(database, packet):
+        print(database.ips)
+        print(packet)
+
         # send NAK message
         packet.op = 2
         packet.clientIPAddress = "0.0.0.0"
@@ -151,7 +154,7 @@ def handle_request_validation(database: Database, packet: DHCPPacket) -> bool:
 
 
 def handle_release(database: Database, packet: DHCPPacket) -> None:
-    pass
+    logging.info("Recive Release")
 
 
 # controller
