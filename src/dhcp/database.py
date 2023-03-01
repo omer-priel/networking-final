@@ -12,7 +12,7 @@ from src.dhcp.config import config
 
 
 class Database(BaseModel):
-    dns: list[str] = ["8.8.8.8", "8.8.4.4"]
+    dns: str = "8.8.8.8"
     router: str = "0.0.0.0"
     subnet_mask: str = "255.255.255.0"
     dhcp_server: str = "0.0.0.0"

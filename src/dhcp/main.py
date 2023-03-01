@@ -46,7 +46,7 @@ def main_loop(database: Database) -> None:
             continue
 
         pocket = DHCPPacket.from_bytes(data)
-        print(pocket)
+        # print(pocket)
 
         if DHCPOptionKey.MessageType not in pocket.options:
             continue
@@ -56,6 +56,7 @@ def main_loop(database: Database) -> None:
             continue
 
         if reqType == MessageType.Discover:
+            logging.info("Recive Discover")
             returnDNS = False
             if DHCPOptionKey.ParamterRequestList in pocket.options:
                 returnDNS = DHCPParameterRequest.DomainNameServer in pocket.options[DHCPOptionKey.ParamterRequestList]
@@ -76,9 +77,10 @@ def main_loop(database: Database) -> None:
             pocket.options[DHCPOptionKey.Router] = database.router
             pocket.options[DHCPOptionKey.DHCPServer] = database.dhcp_server
             if returnDNS:
-                pocket.options[DHCPOptionKey.DomainNameServers] = database.dns
+                pocket.options[DHCPOptionKey.DomainNameServer] = database.dns
 
             senderSocket.sendto(bytes(pocket), clientAddress)
+            logging.info("Send Offer to " + clientAddress + " with ip " + yourIPAddress)
 
 
 

@@ -17,7 +17,7 @@ class DHCPOptionKey(IntEnum):
     ParamterRequestList = 55
     SubnetMask = 1
     Router = 3
-    DomainNameServers = 6
+    DomainNameServer = 6
     DHCPServer = 54
 
     @staticmethod
@@ -213,15 +213,12 @@ def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
     if key == DHCPOptionKey.MessageType:
         return MessageType.from_value(struct.unpack("B", data)[0])
 
-    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer]:
+    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer, DHCPOptionKey.DomainNameServer]:
         return socket.inet_ntoa(data)
 
     if key == DHCPOptionKey.ParamterRequestList:
         arr = [DHCPParameterRequest.from_value(item) for item in list(data)]
         return list(set(sorted(arr)))
-
-    if key == DHCPOptionKey.DomainNameServers:
-        pass
 
     return data
 
@@ -230,7 +227,7 @@ def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
     if key == DHCPOptionKey.MessageType:
         return struct.pack("B", int(value))
 
-    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer]:
+    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer, DHCPOptionKey.DomainNameServer]:
         return socket.inet_aton(value)
 
     if key == DHCPOptionKey.ParamterRequestList:
