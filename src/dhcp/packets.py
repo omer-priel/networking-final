@@ -176,7 +176,7 @@ class DHCPPacket:
         data += self.clientEthernetAddress
 
         # 192 octets of 0s, or overflow space for additional options; BOOTP legacy.
-        data += b"" * 192
+        data += b"\0" * 192
 
         data += struct.pack("I", self.magicCookie)
 
@@ -213,7 +213,13 @@ def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
     if key == DHCPOptionKey.MessageType:
         return MessageType.from_value(struct.unpack("B", data)[0])
 
-    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer, DHCPOptionKey.DomainNameServer]:
+    if key in [
+        DHCPOptionKey.RequestedIPAddress,
+        DHCPOptionKey.SubnetMask,
+        DHCPOptionKey.Router,
+        DHCPOptionKey.DHCPServer,
+        DHCPOptionKey.DomainNameServer,
+    ]:
         return socket.inet_ntoa(data)
 
     if key == DHCPOptionKey.ParamterRequestList:
@@ -227,7 +233,13 @@ def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
     if key == DHCPOptionKey.MessageType:
         return struct.pack("B", int(value))
 
-    if key in [DHCPOptionKey.RequestedIPAddress, DHCPOptionKey.SubnetMask, DHCPOptionKey.Router, DHCPOptionKey.DHCPServer, DHCPOptionKey.DomainNameServer]:
+    if key in [
+        DHCPOptionKey.RequestedIPAddress,
+        DHCPOptionKey.SubnetMask,
+        DHCPOptionKey.Router,
+        DHCPOptionKey.DHCPServer,
+        DHCPOptionKey.DomainNameServer,
+    ]:
         return socket.inet_aton(value)
 
     if key == DHCPOptionKey.ParamterRequestList:
