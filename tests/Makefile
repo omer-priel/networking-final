@@ -3,7 +3,11 @@ SHELL:=/usr/bin/env bash -O globstar
 dhcp-release:
 	sudo dhclient -r
 
+dhcp-get-ip:
+	sudo dhclient
+
 dhcp-renew:
+	sudo dhclient -r
 	sudo dhclient
 
 dhcp-show-ip:
