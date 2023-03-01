@@ -32,6 +32,7 @@ class MessageType(IntEnum):
     Request = 3
     Decline = 4
     ACK = 5
+    NAK = 6
     Release = 7
 
     @staticmethod

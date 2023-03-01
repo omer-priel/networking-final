@@ -8,10 +8,10 @@ from src.dhcp.database import Database, get_database, save_database
 from src.dhcp.packets import *
 
 # globals
-receiverSocket: socket.socket
-senderSocket: socket.socket
+dhcpSocket: socket.socket
 
 
+# network
 def create_socket(database: Database) -> None:
     global dhcpSocket
 
@@ -25,12 +25,14 @@ def create_socket(database: Database) -> None:
     logging.info("The dhcp socket initialized from port {}".format(config.SERVER_PORT))
 
 
-def recvfrom() -> tuple[bytes | None, tuple[str, int] | None]:
+def recvfrom() -> DHCPPacket | None:
     global dhcpSocket
     try:
-        return dhcpSocket.recvfrom(config.SOCKET_MAXSIZE)
+        data = dhcpSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+        packet = DHCPPacket.from_bytes(data)
+        return packet
     except socket.error:
-        return None, None
+        return None
 
 
 def broadcast(database: Database, packet: DHCPPacket) -> None:
@@ -47,14 +49,118 @@ def broadcast(database: Database, packet: DHCPPacket) -> None:
         broadcastSocket.close()
 
 
+# handlers
+def handle_discover(database: Database, packet: DHCPPacket) -> None:
+    logging.info("Recive Discover")
+
+    # create the offered address
+    yourIPAddress = ""
+
+    if DHCPOptionKey.RequestedIPAddress in packet.options:
+        yourIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
+
+    yourIPAddress = database.get_ip(yourIPAddress)
+
+    # create the response
+    packet.op = 2
+    packet.clientIPAddress = "0.0.0.0"
+    packet.yourIPAddress = yourIPAddress
+    packet.serverIPAddress = database.server_address
+    packet.gatewayIPAddress = "0.0.0.0"
+
+    packet.options = {}
+    packet.options[DHCPOptionKey.MessageType] = MessageType.Offer
+    packet.options[DHCPOptionKey.SubnetMask] = database.subnet_mask
+    packet.options[DHCPOptionKey.Router] = database.router
+    packet.options[DHCPOptionKey.DHCPServer] = database.server_address
+    if DHCPOptionKey.ParamterRequestList in packet.options:
+        if DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList]:
+            packet.options[DHCPOptionKey.DomainNameServer] = database.dns
+
+    logging.info("Send Offer with ip " + yourIPAddress)
+    broadcast(database, packet)
+
+
+def handle_request(database: Database, packet: DHCPPacket) -> None:
+    logging.info("Recive Request")
+
+    if not handle_request_validation(database, packet):
+        # send NAK message
+        packet.op = 2
+        packet.clientIPAddress = "0.0.0.0"
+        packet.yourIPAddress = "0.0.0.0"
+        packet.serverIPAddress = database.server_address
+        packet.gatewayIPAddress = "0.0.0.0"
+
+        packet.options = {}
+        packet.options[DHCPOptionKey.MessageType] = MessageType.NAK
+        packet.options[DHCPOptionKey.DHCPServer] = database.server_address
+
+        logging.info("Send NAK")
+        broadcast(database, packet)
+        return None
+
+    requestedIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
+
+    # save
+    database.ips += [requestedIPAddress]
+    save_database(database)
+    logging.info("The ip " + requestedIPAddress + " is saved")
+
+    # send the response
+    packet.op = 2
+    packet.clientIPAddress = "0.0.0.0"
+    packet.yourIPAddress = requestedIPAddress
+    packet.serverIPAddress = database.server_address
+    packet.gatewayIPAddress = "0.0.0.0"
+
+    packet.options[DHCPOptionKey.MessageType] = MessageType.ACK
+    packet.options[DHCPOptionKey.SubnetMask] = database.subnet_mask
+    packet.options[DHCPOptionKey.Router] = database.router
+    packet.options[DHCPOptionKey.DHCPServer] = database.server_address
+    if DHCPOptionKey.ParamterRequestList in packet.options:
+        if DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList]:
+            packet.options[DHCPOptionKey.DomainNameServer] = database.dns
+
+    broadcast(database, packet)
+    logging.info("Send ACK")
+
+
+def handle_request_validation(database: Database, packet: DHCPPacket) -> bool:
+    # validation
+    if DHCPOptionKey.DHCPServer not in packet.options:
+        logging.error("Request: The DHCP Server IP Address option are missing")
+        return False
+
+    if packet.options[DHCPOptionKey.DHCPServer] != database.server_address:
+        logging.error("Request: The DHCP Server IP address is not right")
+        return False
+
+    if DHCPOptionKey.RequestedIPAddress not in packet.options:
+        logging.error("Request: The requested IP address option are missing")
+        return False
+
+    # check if the requested ip address is available
+    requestedIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
+
+    if not database.is_available(requestedIPAddress):
+        logging.error("Request: The requested IP address is not available")
+        return False
+
+    return True
+
+
+def handle_release(database: Database, packet: DHCPPacket) -> None:
+    pass
+
+
+# controller
 def main_loop(database: Database) -> None:
     while True:
-        data, clientAddress = recvfrom()
+        packet = recvfrom()
 
-        if not data:
+        if not packet:
             continue
-
-        packet = DHCPPacket.from_bytes(data)
 
         if DHCPOptionKey.MessageType not in packet.options:
             continue
@@ -64,39 +170,11 @@ def main_loop(database: Database) -> None:
             continue
 
         if reqType == MessageType.Discover:
-            logging.info("Recive Discover")
-            returnDNS = False
-            if DHCPOptionKey.ParamterRequestList in packet.options:
-                returnDNS = DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList]
-
-            yourIPAddress = ""
-
-            # yourIPAddress
-            if DHCPOptionKey.RequestedIPAddress in packet.options:
-                yourIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
-
-            yourIPAddress = database.get_ip(yourIPAddress)
-
-            # response
-            packet.op = 2
-            packet.clientIPAddress = "0.0.0.0"
-            packet.yourIPAddress = yourIPAddress
-            packet.serverIPAddress = database.server_address
-            packet.gatewayIPAddress = "0.0.0.0"
-
-            packet.options = {}
-            packet.options[DHCPOptionKey.MessageType] = MessageType.Offer
-            packet.options[DHCPOptionKey.SubnetMask] = database.subnet_mask
-            packet.options[DHCPOptionKey.Router] = database.router
-            packet.options[DHCPOptionKey.DHCPServer] = database.server_address
-            if returnDNS:
-                packet.options[DHCPOptionKey.DomainNameServer] = database.dns
-
-            print(clientAddress)
-            print(packet)
-
-            broadcast(database, packet)
-            logging.info("Send Offer with ip " + yourIPAddress)
+            handle_discover(database, packet)
+        elif reqType == MessageType.Request:
+            handle_request(database, packet)
+        elif reqType == MessageType.Release:
+            handle_release(database, packet)
 
 
 def main() -> None:

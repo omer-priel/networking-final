@@ -25,14 +25,19 @@ class Database(BaseModel):
     def get_prefix(self) -> str:
         return self.server_address[: self.server_address.rindex(".")] + "."
 
+    def is_available(self, ip: str, prefix: str | None = None) -> bool:
+        if not prefix:
+            prefix = self.get_prefix()
+        return ip.startswith(prefix) and ip not in (self.ips + [self.router, self.server_address])
+
     def get_ip(self, wantIp: str) -> str | None:
         prefix = self.get_prefix()
-        if wantIp.startswith(prefix) and wantIp not in (self.ips + [self.router, self.server_address]):
+        if self.is_available(wantIp, prefix):
             return wantIp
 
         for i in range(self.pool_range[0], self.pool_range[1] + 1):
             yourIP = prefix + str(i)
-            if yourIP not in (self.ips + [self.router, self.server_address]):
+            if self.is_available(yourIP, prefix):
                 return yourIP
 
         return None
