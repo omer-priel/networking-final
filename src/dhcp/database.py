@@ -94,8 +94,10 @@ def save_database(database: Database) -> None:
         os.remove(databasePath)
 
     os.makedirs(os.path.dirname(databasePath), exist_ok=True)
+    os.chown(os.path.dirname(databasePath), config.USER_ID, config.GROUP_ID)
 
     with open(databasePath, "a") as f:
         opts = jsbeautifier.default_options()
         opts.indent_size = 2
         f.write(jsbeautifier.beautify(database.json(), opts))
+        os.chown(databasePath, config.USER_ID, config.GROUP_ID)

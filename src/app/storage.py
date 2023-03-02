@@ -3,6 +3,7 @@
 import os
 import os.path
 
+import jsbeautifier
 from pydantic import BaseModel
 
 from src.app.config import config
@@ -30,7 +31,9 @@ def init_strorage() -> None:
     if not os.path.isfile(config.APP_STORAGE_PATH + config.STORAGE_DATA):
         storageData = StorageData()
         with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "a") as f:
-            f.write(storageData.json())
+            opts = jsbeautifier.default_options()
+            opts.indent_size = 2
+            f.write(jsbeautifier.beautify(storageData.json(), opts))
 
 
 def get_path(path: str, storagePath: str) -> str:

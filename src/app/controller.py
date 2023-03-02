@@ -10,6 +10,8 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
+import jsbeautifier
+
 from src.app.config import config
 from src.app.handlers import (
     DownloadFileRequestHandler,
@@ -196,7 +198,9 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
             storageData.users[request.requestLayer.userName] = userData
 
             with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "w") as f:
-                f.write(storageData.json())
+                opts = jsbeautifier.default_options()
+                opts.indent_size = 2
+                f.write(jsbeautifier.beautify(storageData.json(), opts))
 
         storagePath = config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id + "/"
 

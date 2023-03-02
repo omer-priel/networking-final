@@ -336,7 +336,7 @@ def send_list_command(directoryPath: str, recursive: bool):
         return None
 
     if resPocket.responseLayer.dataSize == 0:
-        print_directory_content([], [])
+        print_directory_content(b"")
         return None
 
     # init segments for downloading
