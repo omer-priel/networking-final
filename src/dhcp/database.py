@@ -1,8 +1,9 @@
 # database
 
-import json
 import os
 import os.path
+import json
+import time
 
 import jsbeautifier
 from pydantic import BaseModel
@@ -18,8 +19,8 @@ class Database(BaseModel):
     server_address: str = "192.168.100.1"
     network_interface: str = "virbr1"
 
-    renewal_time: int = 10   # [s]
-    rebinding_time: int = 10 # [s]
+    renewal_time: int = 30   # [s]
+    rebinding_time: int = 50 # [s]
 
     router: str = "192.168.100.0"
     subnet_mask: str = "255.255.255.0"
@@ -37,7 +38,9 @@ class Database(BaseModel):
     def is_available(self, ip: str, prefix: str | None = None) -> bool:
         if not prefix:
             prefix = self.get_prefix()
-        return ip.startswith(prefix) and ip not in (self.ips + [self.router, self.server_address])
+        if not ip.startswith(prefix) or ip in [self.router, self.server_address]:
+            return False
+        return ip not in self.used_ips
 
     def get_ip(self, wantIp: str) -> str | None:
         prefix = self.get_prefix()
@@ -50,6 +53,15 @@ class Database(BaseModel):
                 return yourIP
 
         return None
+
+    def refresh_used_ips(self) -> None:
+        now = int(time.time())
+        ips = list(self.used_ips.keys())
+        for ip in ips:
+            if now > self.used_ips[ip].expired_time:
+                self.used_ips.pop(ip)
+
+        save_database(self)
 
 
 # global

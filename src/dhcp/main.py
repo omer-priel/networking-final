@@ -2,9 +2,10 @@
 
 import logging
 import socket
+import time
 
 from src.dhcp.config import config, init_config, init_logging
-from src.dhcp.database import Database, get_database, save_database
+from src.dhcp.database import Database, UsedIPInfo, get_database, save_database
 from src.dhcp.packets import *
 
 # globals
@@ -49,6 +50,25 @@ def broadcast(database: Database, packet: DHCPPacket) -> None:
         broadcastSocket.close()
 
 
+# handlers midalwer
+def create_additional_options(database: Database, packet: DHCPPacket) -> dict[DHCPOptionKey, DHCPOptionValue]:
+    additional_options = {}
+    additional_options[DHCPOptionKey.DHCPServer] = database.server_address
+
+    additional_options[DHCPOptionKey.RenewalTime] = database.renewal_time
+    additional_options[DHCPOptionKey.RebindingTime] = database.rebinding_time
+
+    additional_options[DHCPOptionKey.SubnetMask] = database.subnet_mask
+    additional_options[DHCPOptionKey.Router] = database.router
+
+    if DHCPOptionKey.ParamterRequestList in packet.options:
+        if DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList] and database.dns:
+            additional_options[DHCPOptionKey.DomainNameServer] = database.dns
+        if DHCPParameterRequest.BroadcastAddress in packet.options[DHCPOptionKey.ParamterRequestList] and database.broadcast_address:
+            additional_options[DHCPOptionKey.BroadcastAddress] = database.broadcast_address
+
+    return additional_options
+
 # handlers
 def handle_discover(database: Database, packet: DHCPPacket) -> None:
     logging.info("Recive Discover")
@@ -70,12 +90,10 @@ def handle_discover(database: Database, packet: DHCPPacket) -> None:
 
     packet.options = {}
     packet.options[DHCPOptionKey.MessageType] = MessageType.Offer
-    packet.options[DHCPOptionKey.SubnetMask] = database.subnet_mask
-    packet.options[DHCPOptionKey.Router] = database.router
-    packet.options[DHCPOptionKey.DHCPServer] = database.server_address
-    if DHCPOptionKey.ParamterRequestList in packet.options:
-        if DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList]:
-            packet.options[DHCPOptionKey.DomainNameServer] = database.dns
+
+    additional_options = create_additional_options(database, packet)
+    for key in additional_options:
+         packet.options[key] = additional_options[key]
 
     logging.info("Send Offer with ip " + yourIPAddress)
     broadcast(database, packet)
@@ -85,7 +103,7 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
     logging.info("Recive Request")
 
     if not handle_request_validation(database, packet):
-        print(database.ips)
+        print(database.used_ips)
         print(packet)
 
         # send NAK message
@@ -106,7 +124,7 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
     requestedIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
 
     # save
-    database.ips += [requestedIPAddress]
+    database.used_ips[requestedIPAddress] = UsedIPInfo(expired_time=int(time.time()) + database.rebinding_time)
     save_database(database)
     logging.info("The ip " + requestedIPAddress + " is saved")
 
@@ -118,12 +136,10 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
     packet.gatewayIPAddress = "0.0.0.0"
 
     packet.options[DHCPOptionKey.MessageType] = MessageType.ACK
-    packet.options[DHCPOptionKey.SubnetMask] = database.subnet_mask
-    packet.options[DHCPOptionKey.Router] = database.router
-    packet.options[DHCPOptionKey.DHCPServer] = database.server_address
-    if DHCPOptionKey.ParamterRequestList in packet.options:
-        if DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList]:
-            packet.options[DHCPOptionKey.DomainNameServer] = database.dns
+
+    additional_options = create_additional_options(database, packet)
+    for key in additional_options:
+         packet.options[key] = additional_options[key]
 
     broadcast(database, packet)
     logging.info("Send ACK")
@@ -171,6 +187,8 @@ def main_loop(database: Database) -> None:
         reqType: MessageType = packet.options[DHCPOptionKey.MessageType]
         if reqType == MessageType.Unknown:
             continue
+
+        database.refresh_used_ips()
 
         if reqType == MessageType.Discover:
             handle_discover(database, packet)

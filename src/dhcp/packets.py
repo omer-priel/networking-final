@@ -243,7 +243,7 @@ def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
         return struct.pack("B", int(value))
 
     if key in [DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
-        return struct.pack("I", int(value))
+        return struct.pack(">I", int(value))
 
     if key in [
         DHCPOptionKey.RequestedIPAddress,
