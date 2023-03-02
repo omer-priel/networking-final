@@ -5,8 +5,9 @@ import socket
 
 from src.dhcp.config import config
 from src.dhcp.database import Database
+from src.dhcp.handlers import handle_discover, handle_release, handle_renewal_request, handle_request
 from src.dhcp.packets import *
-from src.dhcp.handlers import handle_discover, handle_request, handle_renewal_request, handle_release
+
 
 # network
 def create_socket(database: Database) -> socket.socket:

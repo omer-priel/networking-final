@@ -1,8 +1,8 @@
 # database
 
+import json
 import os
 import os.path
-import json
 import time
 
 import jsbeautifier
@@ -19,11 +19,11 @@ class Database(BaseModel):
     server_address: str = "192.168.100.1"
     network_interface: str = "virbr1"
 
-    lease_time: int     = 60  # [s]
-    renewal_time: int   = 30  # [s]
+    lease_time: int = 60  # [s]
+    renewal_time: int = 30  # [s]
     rebinding_time: int = 50  # [s]
 
-    router: str      = "192.168.100.0"
+    router: str = "192.168.100.0"
     subnet_mask: str = "255.255.255.0"
 
     dns: str | None = "8.8.8.8"

@@ -4,8 +4,8 @@ import logging
 import socket
 
 from src.dhcp.config import init_config, init_logging
-from src.dhcp.database import get_database
 from src.dhcp.controller import main_loop
+from src.dhcp.database import get_database
 
 
 def main() -> None:

@@ -8,6 +8,7 @@ from src.dhcp.config import config
 from src.dhcp.database import Database, IPAddressLease, save_database
 from src.dhcp.packets import *
 
+
 # networking
 def broadcast(database: Database, packet: DHCPPacket) -> None:
     broadcastSocket = socket.socket(type=socket.SOCK_DGRAM)
@@ -38,7 +39,10 @@ def create_additional_options(database: Database, packet: DHCPPacket) -> dict[DH
     if DHCPOptionKey.ParamterRequestList in packet.options:
         if DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList] and database.dns:
             additional_options[DHCPOptionKey.DomainNameServer] = database.dns
-        if DHCPParameterRequest.BroadcastAddress in packet.options[DHCPOptionKey.ParamterRequestList] and database.broadcast_address:
+        if (
+            DHCPParameterRequest.BroadcastAddress in packet.options[DHCPOptionKey.ParamterRequestList]
+            and database.broadcast_address
+        ):
             additional_options[DHCPOptionKey.BroadcastAddress] = database.broadcast_address
 
     return additional_options
@@ -68,7 +72,7 @@ def handle_discover(database: Database, packet: DHCPPacket) -> None:
 
     additional_options = create_additional_options(database, packet)
     for key in additional_options:
-         packet.options[key] = additional_options[key]
+        packet.options[key] = additional_options[key]
 
     logging.info("Send Offer with ip " + yourIPAddress)
     broadcast(database, packet)
@@ -114,7 +118,7 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
 
     additional_options = create_additional_options(database, packet)
     for key in additional_options:
-         packet.options[key] = additional_options[key]
+        packet.options[key] = additional_options[key]
 
     broadcast(database, packet)
     logging.info("Send ACK")
@@ -160,7 +164,7 @@ def handle_renewal_request(database: Database, packet: DHCPPacket) -> None:
 
     additional_options = create_additional_options(database, packet)
     for key in additional_options:
-         packet.options[key] = additional_options[key]
+        packet.options[key] = additional_options[key]
 
     broadcast(database, packet)
     logging.info("Send ACK")
