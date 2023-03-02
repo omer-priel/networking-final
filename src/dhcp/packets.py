@@ -19,8 +19,8 @@ class DHCPOptionKey(IntEnum):
     MessageType = 53
     DHCPServer = 54
     ParamterRequestList = 55
-    RenewalTimeValue = 58
-    RebindingTimeValue = 59
+    RenewalTime = 58
+    RebindingTime = 59
     End = 255
 
     @staticmethod
@@ -218,12 +218,16 @@ def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
     if key == DHCPOptionKey.MessageType:
         return MessageType.from_value(struct.unpack("B", data)[0])
 
+    if key in [DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
+        return struct.unpack("I", data)[0]
+
     if key in [
         DHCPOptionKey.RequestedIPAddress,
         DHCPOptionKey.SubnetMask,
         DHCPOptionKey.Router,
         DHCPOptionKey.DHCPServer,
         DHCPOptionKey.DomainNameServer,
+        DHCPOptionKey.BroadcastAddress,
     ]:
         return socket.inet_ntoa(data)
 
@@ -238,12 +242,16 @@ def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
     if key == DHCPOptionKey.MessageType:
         return struct.pack("B", int(value))
 
+    if key in [DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
+        return struct.pack("I", int(value))
+
     if key in [
         DHCPOptionKey.RequestedIPAddress,
         DHCPOptionKey.SubnetMask,
         DHCPOptionKey.Router,
         DHCPOptionKey.DHCPServer,
         DHCPOptionKey.DomainNameServer,
+        DHCPOptionKey.BroadcastAddress,
     ]:
         return socket.inet_aton(value)
 

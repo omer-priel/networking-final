@@ -12,7 +12,15 @@ from getmac import get_mac_address
 from scapy.all import Packet, AsyncSniffer, sniff, PacketList
 from scapy.layers.dhcp import Ether, IP, UDP, BOOTP, DHCP, sendp
 
-import src.dhcp_client.sender as sender
+import socket
+import psutil
+ifaces = psutil.net_if_addrs()
+ips = []
+for iface in ifaces:
+    for item in ifaces[iface]:
+        if item.family == socket.AddressFamily.AF_INET:
+            ips += [item.address]
+
 
 def sniffer_handler(packet: Packet):
     print(packet)

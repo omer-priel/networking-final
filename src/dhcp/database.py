@@ -10,17 +10,26 @@ from pydantic import BaseModel
 from src.dhcp.config import config
 
 
-class Database(BaseModel):
-    server_address: str = "192.168.122.1"
-    network_interface: str = "virbr0"
+class UsedIPInfo(BaseModel):
+    expired_time: int
 
-    dns: str = "8.8.8.8"
-    router: str = "169.254.0.0"
+
+class Database(BaseModel):
+    server_address: str = "192.168.100.1"
+    network_interface: str = "virbr1"
+
+    renewal_time: int = 10   # [s]
+    rebinding_time: int = 10 # [s]
+
+    router: str = "192.168.100.0"
     subnet_mask: str = "255.255.255.0"
+
+    dns: str | None = "8.8.8.8"
+    broadcast_address: str| None = None
 
     pool_range: tuple[int, int] = (10, 50)
 
-    ips: list[str] = []
+    used_ips: dict[str, UsedIPInfo] = {}
 
     def get_prefix(self) -> str:
         return self.server_address[: self.server_address.rindex(".")] + "."
