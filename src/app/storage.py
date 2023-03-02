@@ -3,7 +3,7 @@
 import os
 import os.path
 
-import jsbeautifier
+import jsbeautifier  # type: ignore
 from pydantic import BaseModel
 
 from src.app.config import config

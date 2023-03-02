@@ -10,7 +10,7 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-import jsbeautifier
+import jsbeautifier  # type: ignore
 
 from src.app.config import config
 from src.app.handlers import (
@@ -74,7 +74,7 @@ def main_loop() -> None:
                         handler.ready = True
                         notReady.pop(handler.get_requestID())
 
-                        def downloading_task(handler: DownloadRequestHandler):
+                        def downloading_task(handler: DownloadRequestHandler) -> None:
                             global handlers, handlersLock
 
                             handler.locker.acquire()
@@ -147,9 +147,11 @@ def main_loop() -> None:
                                         handler.windowToSend = handler.windowSending + handler.windowToSend
                                         handler.windowSending = []
                                         cwndMax = cwnd
-                                        cwnd = max(cwnd / 2, 1)
+                                        cwnd = int(max(cwnd / 2, 1))
                                     else:
-                                        cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1)
+                                        cwnd = int(
+                                            max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1)
+                                        )
 
                                     rtt = time.time() - last
                                     last = time.time()

@@ -28,7 +28,7 @@ class RequestHandler(ABC):
     def get_client_address(self) -> tuple[str, int]:
         return self._clientAddress
 
-    def get_requestID(self):
+    def get_requestID(self) -> int:
         return self.requestID
 
     def get_path(self, path: str) -> str:
@@ -53,8 +53,8 @@ class DownloadRequestHandler(RequestHandler):
     def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
         RequestHandler.__init__(self, False, request, clientAddress, storagePath)
         self.data = b""
-        self.windowToSend = []
-        self.windowSending = []
+        self.windowToSend: list[int] = []
+        self.windowSending: list[int] = []
         self.ready = False
         self.response: Pocket = None
         self.pockets: list[Pocket] = []

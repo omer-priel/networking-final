@@ -115,7 +115,7 @@ def upload_file(filename: str, destination: str) -> None:
     segmentsAmount = resPocket.responseLayer.segmentsAmount
 
     windowToSend = list(range(segmentsAmount))
-    windowSending = []
+    windowSending: list[int] = []
 
     rtt = config.SOCKET_TIMEOUT
     cwnd = cwndMax = config.CWND_START_VALUE
@@ -172,15 +172,15 @@ def upload_file(filename: str, destination: str) -> None:
                 windowToSend = windowSending + windowToSend
                 windowSending = []
                 cwndMax = cwnd
-                cwnd = max(cwnd / 2, 1)
+                cwnd = int(max(cwnd / 2, 1))
             else:
-                cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1)
+                cwnd = int(max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1))
 
             rtt = time.time() - last
             last = time.time()
 
 
-def download_file(filePath: str, destination: str):
+def download_file(filePath: str, destination: str) -> None:
     # check if the directory of destination exists
     if os.path.isfile(destination):
         os.remove(destination)
@@ -310,7 +310,7 @@ def download_file(filePath: str, destination: str):
     logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
 
 
-def send_list_command(directoryPath: str, recursive: bool):
+def send_list_command(directoryPath: str, recursive: bool) -> None:
     # send list request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.List))
     reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
@@ -436,7 +436,7 @@ def print_directory_content(data: bytes) -> None:
     print(table)
 
 
-def print_help():
+def print_help() -> None:
     print('client is CLI client for custom app like "FTP" based on UDP.')
     print("  client --help                                          - print the help content")
     print("  client [options] upload [--dest <destination>] <file>  - upload file")
