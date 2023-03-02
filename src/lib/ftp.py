@@ -31,7 +31,7 @@ class PocketSubType(IntEnum):
 # Layer Interface
 class LayerInterface(ABC):
     @abstractmethod
-    def length(self) -> int:
+    def __len__(self) -> int:
         ...
 
     @abstractmethod
@@ -60,7 +60,7 @@ class BasicLayer(LayerInterface):
         self.pocketSubType = pocketSubType
         self.requestID = requestID
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("BBL")
 
     def __bytes__(self) -> bytes:
@@ -109,7 +109,7 @@ class RequestLayer(LayerInterface):
         self.userName = userName
         self.password = password
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("LL?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
 
     def __bytes__(self) -> bytes:
@@ -156,7 +156,7 @@ class ResponseLayer(LayerInterface):
         self.segmentsAmount = segmentsAmount
         self.singleSegmentSize = singleSegmentSize
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("?B") + len(self.errorMessage) + struct.calcsize("LLL")
 
     def __bytes__(self) -> bytes:
@@ -183,7 +183,7 @@ class SegmentLayer(LayerInterface):
         self.segmentID = segmentID
         self.data = data
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("LI") + len(self.data)
 
     def __bytes__(self) -> bytes:
@@ -202,7 +202,7 @@ class AKCLayer(LayerInterface):
     def __init__(self, segmentID: int) -> None:
         self.segmentID = segmentID
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("L")
 
     def __bytes__(self) -> bytes:
@@ -225,7 +225,7 @@ class UploadRequestLayer(LayerInterface):
     def __init__(self, filePath: str) -> None:
         self.path = filePath
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("I") + len(self.path)
 
     def __bytes__(self) -> bytes:
@@ -248,7 +248,7 @@ class DownloadRequestLayer(LayerInterface):
     def __init__(self, filePath: str) -> None:
         self.path = filePath
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("I") + len(self.path)
 
     def __bytes__(self) -> bytes:
@@ -275,7 +275,7 @@ class ListRequestLayer(LayerInterface):
         self.path = directoryPath
         self.recursive = recursive
 
-    def length(self) -> int:
+    def __len__(self) -> int:
         return struct.calcsize("I") + len(self.path) + struct.calcsize("?")
 
     def __bytes__(self) -> bytes:
@@ -344,13 +344,13 @@ class Pocket:
     def from_bytes(data: bytes) -> Pocket:
         offset = 0
         basicLayer = BasicLayer.from_bytes(data, offset)
-        offset += basicLayer.length()
+        offset += len(basicLayer)
 
         pocket = Pocket(basicLayer)
 
         if basicLayer.pocketType == PocketType.Request:
             pocket.requestLayer = RequestLayer.from_bytes(data, offset)
-            offset += pocket.requestLayer.length()
+            offset += len(pocket.requestLayer)
             if basicLayer.pocketSubType == PocketSubType.Upload:
                 pocket.uploadRequestLayer = UploadRequestLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.Download:
