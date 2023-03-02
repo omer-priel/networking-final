@@ -10,11 +10,27 @@ import time
 from prettytable import PrettyTable
 
 from src.lib.config import config, init_logging
-from src.lib.ftp import *
+from src.lib.ftp import (
+    AKCLayer,
+    BasicLayer,
+    DownloadRequestLayer,
+    ListRequestLayer,
+    Pocket,
+    PocketSubType,
+    PocketType,
+    RequestLayer,
+    SegmentLayer,
+    UploadRequestLayer,
+    unpack_block_type,
+    unpack_directory_block,
+    unpack_file_block,
+)
 
-clientSocket: socket.socket
-
+# config
 MAX_SEGMENT_SIZE = 1000  # [byte]
+
+# globals
+clientSocket: socket.socket = ...
 
 
 class Options:
