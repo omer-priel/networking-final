@@ -221,8 +221,6 @@ def main_loop(database: Database) -> None:
         if reqType == MessageType.Unknown:
             continue
 
-        database.refresh_ip_address_leases()
-
         if reqType == MessageType.Discover:
             handle_discover(database, packet)
         elif reqType == MessageType.Request:

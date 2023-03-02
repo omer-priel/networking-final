@@ -53,16 +53,24 @@ class Database(BaseModel):
             if self.is_available(yourIP, prefix):
                 return yourIP
 
+        if self.clean_ip_address_leases():
+            for i in range(self.pool_range[0], self.pool_range[1] + 1):
+                yourIP = prefix + str(i)
+                if self.is_available(yourIP, prefix):
+                    return yourIP
+
         return None
 
-    def refresh_ip_address_leases(self) -> None:
+    def clean_ip_address_leases(self) -> bool:
         now = int(time.time())
         ips = list(self.ip_address_leases.keys())
         for ip in ips:
             if now > self.ip_address_leases[ip].expired_time:
                 self.ip_address_leases.pop(ip)
+                save_database(self)
+                return True
 
-        save_database(self)
+        return False
 
 
 # global
