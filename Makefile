@@ -30,7 +30,7 @@ flake8:
 	poetry run flake8
 
 mypy:
-	poetry run mypy .
+	poetry run mypy src
 
 lint:
 	make flake8

@@ -6,7 +6,7 @@ import socket
 from src.dhcp.config import config
 from src.dhcp.database import Database
 from src.dhcp.handlers import handle_discover, handle_release, handle_renewal_request, handle_request
-from src.dhcp.packets import *
+from src.dhcp.packets import DHCPOptionKey, DHCPPacket, MessageType
 
 
 # network

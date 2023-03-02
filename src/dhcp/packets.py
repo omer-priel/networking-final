@@ -197,7 +197,11 @@ class DHCPPacket:
         return data
 
     def __repr__(self) -> str:
-        return "| op: {}, htype: {}, hlen: {}, hops: {}, xid: {}, secs: {}, flags: {},  client: {}, your: {}, server: {}, relay: {}, clientEthernetAddress: {}, magic-cookie: {}, options: {} |".format(
+        return (
+            "| op: {}, htype: {}, hlen: {}, hops: {}, xid: {}, secs: {}, flags: {}"
+            + ",  client: {}, your: {}, server: {}, relay: {}, client ethernet address: {}"
+            + ", magic-cookie: {}, options: {} |"
+        ).format(
             self.op,
             self.htype,
             self.hlen,

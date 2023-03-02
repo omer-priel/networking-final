@@ -6,7 +6,7 @@ import time
 
 from src.dhcp.config import config
 from src.dhcp.database import Database, IPAddressLease, save_database
-from src.dhcp.packets import *
+from src.dhcp.packets import DHCPOptionKey, DHCPOptionValue, DHCPPacket, DHCPParameterRequest, MessageType
 
 
 # networking
