@@ -11,14 +11,17 @@ from enum import IntEnum
 
 class DHCPOptionKey(IntEnum):
     Padding = 0
-    End = 255
-    MessageType = 53
-    RequestedIPAddress = 50
-    ParamterRequestList = 55
     SubnetMask = 1
     Router = 3
     DomainNameServer = 6
+    BroadcastAddress = 28
+    RequestedIPAddress = 50
+    MessageType = 53
     DHCPServer = 54
+    ParamterRequestList = 55
+    RenewalTimeValue = 58
+    RebindingTimeValue = 59
+    End = 255
 
     @staticmethod
     def has_value(value: int) -> bool:
@@ -52,6 +55,7 @@ class DHCPParameterRequest(IntEnum):
     SubnetMask = 1
     Router = 3
     DomainNameServer = 6
+    BroadcastAddress = 28
 
     @staticmethod
     def has_value(value: int) -> bool:

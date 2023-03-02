@@ -247,3 +247,9 @@ dhcp-kill-dhclient:
 
 dhcp-stop-dnsmasq:
 	sudo killall dnsmasq
+
+dhcp-edit-config-file:
+	sudo nano /etc/dhcp/dhclient.conf
+
+dhcp-edit-leases-file:
+	sudo nano /var/lib/dhcp/dhclient.leases
