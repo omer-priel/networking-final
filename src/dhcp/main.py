@@ -173,7 +173,7 @@ def handle_renewal_request(database: Database, packet: DHCPPacket) -> None:
     # save
     database.ip_address_leases[clientIPAddress] = IPAddressLease(expired_time=int(time.time()) + database.lease_time)
     save_database(database)
-    logging.info("The ip " + clientIPAddress + " are renewaled and saved")
+    logging.info("The ip " + clientIPAddress + " are renewaled")
 
     # send the response
     packet.op = 2
@@ -194,6 +194,16 @@ def handle_renewal_request(database: Database, packet: DHCPPacket) -> None:
 
 def handle_release(database: Database, packet: DHCPPacket) -> None:
     logging.info("Recive Release")
+
+    clientIPAddress = packet.clientIPAddress
+
+    if clientIPAddress not in database.ip_address_leases:
+        return None
+
+    # Release the ip address
+    database.ip_address_leases.pop(clientIPAddress)
+    save_database(database)
+    logging.info("The ip " + clientIPAddress + " are released")
 
 
 # controller
