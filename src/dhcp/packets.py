@@ -220,7 +220,7 @@ def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
         return MessageType.from_value(struct.unpack("B", data)[0])
 
     if key in [DHCPOptionKey.IPAddressLeaseTime, DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
-        return struct.unpack("I", data)[0]
+        return struct.unpack(">I", data)[0]
 
     if key in [
         DHCPOptionKey.RequestedIPAddress,
