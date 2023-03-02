@@ -35,7 +35,7 @@ class LayerInterface(ABC):
         ...
 
     @abstractmethod
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         ...
 
 
@@ -63,7 +63,7 @@ class BasicLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("BBL")
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack(
             "BBL",
             self.pocketType,
@@ -112,7 +112,7 @@ class RequestLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("LL?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         ret = struct.pack(
             "LL?I",
             self.pocketFullSize,
@@ -159,7 +159,7 @@ class ResponseLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("?B") + len(self.errorMessage) + struct.calcsize("LLL")
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         ret = struct.pack("?B", self.ok, len(self.errorMessage))
         ret += self.errorMessage.encode()
         ret += struct.pack("LLL", self.dataSize, self.segmentsAmount, self.singleSegmentSize)
@@ -186,7 +186,7 @@ class SegmentLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("LI") + len(self.data)
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack("LI", self.segmentID, len(self.data)) + self.data
 
     def __str__(self) -> str:
@@ -205,7 +205,7 @@ class AKCLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("L")
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack("L", self.segmentID)
 
     def __str__(self) -> str:
@@ -228,7 +228,7 @@ class UploadRequestLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("I") + len(self.path)
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack("I", len(self.path)) + self.path.encode()
 
     def __str__(self) -> str:
@@ -251,7 +251,7 @@ class DownloadRequestLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("I") + len(self.path)
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack("I", len(self.path)) + self.path.encode()
 
     def __str__(self) -> str:
@@ -278,7 +278,7 @@ class ListRequestLayer(LayerInterface):
     def length(self) -> int:
         return struct.calcsize("I") + len(self.path) + struct.calcsize("?")
 
-    def to_bytes(self) -> bytes:
+    def __bytes__(self) -> bytes:
         return struct.pack("I", len(self.path)) + self.path.encode() + struct.pack("?", self.recursive)
 
     def __str__(self) -> str:
@@ -378,23 +378,23 @@ class Pocket:
         self.downloadRequestLayer: DownloadRequestLayer | None = None
         self.listRequestLayer: ListRequestLayer | None = None
 
-    def to_bytes(self) -> bytes:
-        data = self.basicLayer.to_bytes()
+    def __bytes__(self) -> bytes:
+        data = bytes(self.basicLayer)
 
         if self.requestLayer:
-            data += self.requestLayer.to_bytes()
+            data += bytes(self.requestLayer)
             if self.uploadRequestLayer:
-                data += self.uploadRequestLayer.to_bytes()
+                data += bytes(self.uploadRequestLayer)
             elif self.downloadRequestLayer:
-                data += self.downloadRequestLayer.to_bytes()
+                data += bytes(self.downloadRequestLayer)
             elif self.listRequestLayer:
-                data += self.listRequestLayer.to_bytes()
+                data += bytes(self.listRequestLayer)
         elif self.responseLayer:
-            data += self.responseLayer.to_bytes()
+            data += bytes(self.responseLayer)
         elif self.segmentLayer:
-            data += self.segmentLayer.to_bytes()
+            data += bytes(self.segmentLayer)
         elif self.akcLayer:
-            data += self.akcLayer.to_bytes()
+            data += bytes(self.akcLayer)
 
         return data
 

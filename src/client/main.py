@@ -87,7 +87,7 @@ def upload_file(filename: str, destination: str) -> None:
     # send request
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(reqPocket.to_bytes(), options.appAddress)
+    clientSocket.sendto(bytes(reqPocket), options.appAddress)
 
     # recive response
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -141,7 +141,7 @@ def upload_file(filename: str, destination: str) -> None:
 
             windowSending.append(segmentID)
 
-            clientSocket.sendto(segmentPocket.to_bytes(), options.appAddress)
+            clientSocket.sendto(bytes(segmentPocket), options.appAddress)
         else:
             # refresh window
             logging.debug(
@@ -206,7 +206,7 @@ def download_file(filePath: str, destination: str):
 
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(reqPocket.to_bytes(), options.appAddress)
+    clientSocket.sendto(bytes(reqPocket), options.appAddress)
 
     # recive download response
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -249,7 +249,7 @@ def download_file(filePath: str, destination: str):
     itFirstSegment = False
 
     while not itFirstSegment:
-        clientSocket.sendto(readyPocket.to_bytes(), options.appAddress)
+        clientSocket.sendto(bytes(readyPocket), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -278,7 +278,7 @@ def download_file(filePath: str, destination: str):
 
                 akcPocket = Pocket(BasicLayer(requestID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
-                clientSocket.sendto(akcPocket.to_bytes(), options.appAddress)
+                clientSocket.sendto(bytes(akcPocket), options.appAddress)
         except socket.error:
             pass
 
@@ -289,7 +289,7 @@ def download_file(filePath: str, destination: str):
     closed = False
 
     while not closed:
-        clientSocket.sendto(complitedPocket.to_bytes(), options.appAddress)
+        clientSocket.sendto(bytes(complitedPocket), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -318,7 +318,7 @@ def send_list_command(directoryPath: str, recursive: bool):
 
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(reqPocket.to_bytes(), options.appAddress)
+    clientSocket.sendto(bytes(reqPocket), options.appAddress)
 
     # recive list response
     data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -356,7 +356,7 @@ def send_list_command(directoryPath: str, recursive: bool):
     itFirstSegment = False
 
     while not itFirstSegment:
-        clientSocket.sendto(readyPocket.to_bytes(), options.appAddress)
+        clientSocket.sendto(bytes(readyPocket), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
@@ -385,7 +385,7 @@ def send_list_command(directoryPath: str, recursive: bool):
 
                 akcPocket = Pocket(BasicLayer(requestID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
-                clientSocket.sendto(akcPocket.to_bytes(), options.appAddress)
+                clientSocket.sendto(bytes(akcPocket), options.appAddress)
         except socket.error:
             pass
 
@@ -397,7 +397,7 @@ def send_list_command(directoryPath: str, recursive: bool):
     closed = False
 
     while not closed:
-        clientSocket.sendto(complitedPocket.to_bytes(), options.appAddress)
+        clientSocket.sendto(bytes(complitedPocket), options.appAddress)
 
         try:
             data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]

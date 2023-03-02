@@ -32,7 +32,7 @@ def create_socket() -> None:
 
 
 def sendto(pocket: Pocket, clientAddress: tuple[str, int]) -> None:
-    appSocket.sendto(pocket.to_bytes(), clientAddress)
+    appSocket.sendto(bytes(pocket), clientAddress)
 
 
 def recvfrom() -> tuple[bytes | None, tuple[str, int]]:
