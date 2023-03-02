@@ -159,13 +159,13 @@ test-client-download-child-1000: temp
 test-client-download-child-10000: temp
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/10K.txt ./temp/child/10K.txt
 
-test-client-download-multi:
+test-client-download-multi: temp
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/b/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/c/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/b/c/100.txt
 
-test-client-download-all:
+test-client-download-all: temp
 	make test-client-download
 	make test-client-download-child
 	make test-client-download-100
@@ -176,17 +176,17 @@ test-client-download-all:
 	make test-client-download-child-10000
 	make test-client-download-multi
 
-test-client-download-not-found:
+test-client-download-not-found: temp
 	PYTHONPATH=. poetry run python src/client/main.py download ../.env ./temp/.enve
 	PYTHONPATH=. poetry run python src/client/main.py download abdasda ./temp/abdasda
 
-test-client-download-user:
+test-client-download-user: temp
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download A.md ./temp/A.md
 
-test-client-download-user-without-password:
+test-client-download-user-without-password: temp
 	PYTHONPATH=. poetry run python src/client/main.py --user bar download A.md ./temp/A.md
 
-test-client-download-user-multi:
+test-client-download-user-multi: temp
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download a/100.txt ./temp/a/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download b/100.txt ./temp/b/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download a/c/100.txt ./temp/a/c/100.txt

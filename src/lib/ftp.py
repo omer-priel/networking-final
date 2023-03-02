@@ -308,7 +308,7 @@ def unpack_directory_block(data: bytes, offset: int) -> tuple[tuple[str, float],
     else:
         directoryName = bytes.decode(data[offset : offset + directoryNameLength])
     offset += directoryNameLength
-    updatedAt = struct.unpack_from("dLL", data, offset)[0]
+    updatedAt = struct.unpack_from("d", data, offset)[0]
     offset += struct.calcsize("d")
 
     return ((directoryName, updatedAt), offset)
