@@ -9,11 +9,11 @@ install:
 	poetry install
 
 clean:
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
-	rm -rf temp storage
+	find . -name '*.pyc' -exec sudo rm -f {} +
+	find . -name '*.pyo' -exec sudo rm -f {} +
+	find . -name '*~' -exec sudo rm -f {} +
+	find . -name '__pycache__' -exec sudo rm -fr {} +
+	sudo rm -rf temp storage
 
 clean-all: clean
 	rm -rf .venv poetry.lock
@@ -50,7 +50,7 @@ start-app:
 	PYTHONPATH=. poetry run python src/app/main.py
 
 start-dhcp:
-	PYTHONPATH=. poetry run python src/dhcp/main.py
+	sudo ./.venv/bin/python3 src/dhcp/main.py
 
 start-dns:
 	PYTHONPATH=. poetry run python src/dns/main.py
@@ -223,3 +223,36 @@ test-client-list-user-recursive:
 	PYTHONPATH=. poetry run python src/client/main.py --user bar list --recursive
 
 test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found
+
+
+test-dhcp-release:
+	sudo dhclient -r
+
+test-dhcp-get-ip:
+	sudo dhclient
+
+test-dhcp-renew:
+	sudo dhclient -r
+	sudo dhclient
+
+dhcp-show-my-ip:
+	ip a
+
+dhcp-show-apps-on-ports:
+	sudo lsof -i -P -n | grep :67
+	sudo lsof -i -P -n | grep :68
+
+dhcp-kill-dhclient:
+	sudo killall dhclient
+
+dhcp-stop-dnsmasq:
+	sudo killall dnsmasq
+
+dhcp-edit-config-file:
+	sudo nano /etc/dhcp/dhclient.conf
+
+dhcp-edit-leases-file:
+	sudo nano /var/lib/dhcp/dhclient.leases
+
+dhcp-fix-permissions:
+	sudo chown -R $(USER): storage

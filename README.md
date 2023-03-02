@@ -118,7 +118,7 @@ Path: path of the directory (folder) on the server
 
 #### List Data
 
-The full combine segments is:
+The full combine segments is: \
 list of directories and files, when directory present
 
 | Is Directory - 1 | Name Length |         Name          | Updated At |
@@ -131,9 +131,25 @@ and file is
 |------------------|-------------|-----------------------|------------|------------|
 | 1 Byte           | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
+### DHCP Server
+
+Config: \
+Get from port 67 and reply to port 68 \
+
+Storage: \
+
+* Subnet Mask - The local subnet mask
+* Getway - The IP of the gateway
+* DNS - IP to a DNS Server
+
+* IP Scopes
+* Taken IP's
+
 ## Links
 
 * Python Struct: <https://docs.python.org/3.7/library/struct.html>
+* DHCP Wikipedia: <https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol>
+* DHCP defied and who it works: <https://www.networkworld.com/article/3299438/dhcp-defined-and-how-it-works.html>
 
 ## Author
 
