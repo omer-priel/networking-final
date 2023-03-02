@@ -4,10 +4,10 @@ import logging
 import socket
 
 from src.app.config import config
-from src.lib.ftp import *
+from src.lib.ftp import BasicLayer, Pocket, PocketType, ResponseLayer
 
 # globals
-appSocket: socket.socket
+appSocket: socket.socket = ...
 lastRequestID = 0
 
 
