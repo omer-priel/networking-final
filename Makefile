@@ -26,6 +26,17 @@ isort:
 
 fix: isort black
 
+flake8:
+	poetry run flake8
+
+mypy:
+	poetry run mypy .
+
+lint:
+	make flake8
+	poetry run black --check --diff ./
+	make mypy
+
 fix-lint: fix lint
 
 # scripts

@@ -1,0 +1,17 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    docs,
+    res,
+    uploads,
+    storage,
+    temp
+
+# E203: whitespace before ':' (this one messes with slicing, let black handle it)
+# E712:	Comparison to true should be 'if cond is true:' or 'if cond:'
+# W503: line break before binary operator
+# B902: blind except Exception: statement
+ignore = E203,E712,W503,B902
+max-line-length = 120
