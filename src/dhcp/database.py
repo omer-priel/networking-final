@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from src.dhcp.config import config
 
 
-class UsedIPInfo(BaseModel):
+class IPAddressLease(BaseModel):
     expired_time: int
 
 
@@ -19,6 +19,7 @@ class Database(BaseModel):
     server_address: str = "192.168.100.1"
     network_interface: str = "virbr1"
 
+    lease_time: int = 60
     renewal_time: int = 30   # [s]
     rebinding_time: int = 50 # [s]
 
@@ -30,7 +31,7 @@ class Database(BaseModel):
 
     pool_range: tuple[int, int] = (10, 50)
 
-    used_ips: dict[str, UsedIPInfo] = {}
+    ip_address_leases: dict[str, IPAddressLease] = {}
 
     def get_prefix(self) -> str:
         return self.server_address[: self.server_address.rindex(".")] + "."
@@ -40,7 +41,7 @@ class Database(BaseModel):
             prefix = self.get_prefix()
         if not ip.startswith(prefix) or ip in [self.router, self.server_address]:
             return False
-        return ip not in self.used_ips
+        return ip not in self.ip_address_leases
 
     def get_ip(self, wantIp: str) -> str | None:
         prefix = self.get_prefix()
@@ -54,12 +55,12 @@ class Database(BaseModel):
 
         return None
 
-    def refresh_used_ips(self) -> None:
+    def refresh_ip_address_leases(self) -> None:
         now = int(time.time())
-        ips = list(self.used_ips.keys())
+        ips = list(self.ip_address_leases.keys())
         for ip in ips:
-            if now > self.used_ips[ip].expired_time:
-                self.used_ips.pop(ip)
+            if now > self.ip_address_leases[ip].expired_time:
+                self.ip_address_leases.pop(ip)
 
         save_database(self)
 

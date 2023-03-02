@@ -253,3 +253,6 @@ dhcp-edit-config-file:
 
 dhcp-edit-leases-file:
 	sudo nano /var/lib/dhcp/dhclient.leases
+
+dhcp-fix-permissions:
+	sudo chown -R $(USER): storage

@@ -16,6 +16,7 @@ class DHCPOptionKey(IntEnum):
     DomainNameServer = 6
     BroadcastAddress = 28
     RequestedIPAddress = 50
+    IPAddressLeaseTime = 51
     MessageType = 53
     DHCPServer = 54
     ParamterRequestList = 55
@@ -218,7 +219,7 @@ def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
     if key == DHCPOptionKey.MessageType:
         return MessageType.from_value(struct.unpack("B", data)[0])
 
-    if key in [DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
+    if key in [DHCPOptionKey.IPAddressLeaseTime, DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
         return struct.unpack("I", data)[0]
 
     if key in [
@@ -242,7 +243,7 @@ def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
     if key == DHCPOptionKey.MessageType:
         return struct.pack("B", int(value))
 
-    if key in [DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
+    if key in [DHCPOptionKey.IPAddressLeaseTime, DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
         return struct.pack(">I", int(value))
 
     if key in [

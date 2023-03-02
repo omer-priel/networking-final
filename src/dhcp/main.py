@@ -5,7 +5,7 @@ import socket
 import time
 
 from src.dhcp.config import config, init_config, init_logging
-from src.dhcp.database import Database, UsedIPInfo, get_database, save_database
+from src.dhcp.database import Database, IPAddressLease, get_database, save_database
 from src.dhcp.packets import *
 
 # globals
@@ -55,6 +55,7 @@ def create_additional_options(database: Database, packet: DHCPPacket) -> dict[DH
     additional_options = {}
     additional_options[DHCPOptionKey.DHCPServer] = database.server_address
 
+    additional_options[DHCPOptionKey.IPAddressLeaseTime] = database.lease_time
     additional_options[DHCPOptionKey.RenewalTime] = database.renewal_time
     additional_options[DHCPOptionKey.RebindingTime] = database.rebinding_time
 
@@ -103,7 +104,7 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
     logging.info("Recive Request")
 
     if not handle_request_validation(database, packet):
-        print(database.used_ips)
+        print(database.ip_address_leases)
         print(packet)
 
         # send NAK message
@@ -124,9 +125,9 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
     requestedIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
 
     # save
-    database.used_ips[requestedIPAddress] = UsedIPInfo(expired_time=int(time.time()) + database.rebinding_time)
+    database.ip_address_leases[requestedIPAddress] = IPAddressLease(expired_time=int(time.time()) + database.lease_time)
     save_database(database)
-    logging.info("The ip " + requestedIPAddress + " is saved")
+    logging.info("The ip " + requestedIPAddress + " are saved")
 
     # send the response
     packet.op = 2
@@ -147,13 +148,10 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
 
 def handle_request_validation(database: Database, packet: DHCPPacket) -> bool:
     # validation
-    if DHCPOptionKey.DHCPServer not in packet.options:
-        logging.error("Request: The DHCP Server IP Address option are missing")
-        return False
-
-    if packet.options[DHCPOptionKey.DHCPServer] != database.server_address:
-        logging.error("Request: The DHCP Server IP address is not right")
-        return False
+    if DHCPOptionKey.DHCPServer in packet.options:
+        if packet.options[DHCPOptionKey.DHCPServer] != database.server_address:
+            logging.warn("Request: The DHCP Server IP address is not this server")
+            return False
 
     if DHCPOptionKey.RequestedIPAddress not in packet.options:
         logging.error("Request: The requested IP address option are missing")
@@ -167,6 +165,31 @@ def handle_request_validation(database: Database, packet: DHCPPacket) -> bool:
         return False
 
     return True
+
+
+def handle_renewal_request(database: Database, packet: DHCPPacket) -> None:
+    clientIPAddress = packet.clientIPAddress
+
+    # save
+    database.ip_address_leases[clientIPAddress] = IPAddressLease(expired_time=int(time.time()) + database.lease_time)
+    save_database(database)
+    logging.info("The ip " + clientIPAddress + " are renewaled and saved")
+
+    # send the response
+    packet.op = 2
+    packet.clientIPAddress = clientIPAddress
+    packet.yourIPAddress = clientIPAddress
+    packet.serverIPAddress = database.server_address
+    packet.gatewayIPAddress = "0.0.0.0"
+
+    packet.options[DHCPOptionKey.MessageType] = MessageType.ACK
+
+    additional_options = create_additional_options(database, packet)
+    for key in additional_options:
+         packet.options[key] = additional_options[key]
+
+    broadcast(database, packet)
+    logging.info("Send ACK")
 
 
 def handle_release(database: Database, packet: DHCPPacket) -> None:
@@ -188,12 +211,15 @@ def main_loop(database: Database) -> None:
         if reqType == MessageType.Unknown:
             continue
 
-        database.refresh_used_ips()
+        database.refresh_ip_address_leases()
 
         if reqType == MessageType.Discover:
             handle_discover(database, packet)
         elif reqType == MessageType.Request:
-            handle_request(database, packet)
+            if packet.clientIPAddress not in database.ip_address_leases:
+                handle_request(database, packet)
+            else:
+                handle_renewal_request(database, packet)
         elif reqType == MessageType.Release:
             handle_release(database, packet)
 
