@@ -1,13 +1,15 @@
 # FTP handlers
 
+import logging
 import os
 import os.path
 import threading
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 
-from src.app.rudp import *
+from src.app.config import config
+from src.app.rudp import create_new_requestID, send_error
 from src.app.storage import get_path, in_storage
-from src.lib.ftp import *
+from src.lib.ftp import BasicLayer, Pocket, PocketSubType, PocketType, pack_directory_block, pack_file_block
 
 
 # interfaces
@@ -19,14 +21,14 @@ class RequestHandler(ABC):
         self.requestID = 0
         self._storagePath = storagePath
 
-    @abstractclassmethod
+    @abstractmethod
     def route(self) -> tuple[Pocket, bytes | None] | None:
-        pass
+        ...
 
     def get_client_address(self) -> tuple[str, int]:
         return self._clientAddress
 
-    def get_requestID(self):
+    def get_requestID(self) -> int:
         return self.requestID
 
     def get_path(self, path: str) -> str:
@@ -42,17 +44,17 @@ class UploadRequestHandler(RequestHandler):
         self.segments: dict[int, bytes] = {}
         self.segmentsAmount = 0
 
-    @abstractclassmethod
+    @abstractmethod
     def post_upload(self, data: bytes) -> None:
-        pass
+        ...
 
 
 class DownloadRequestHandler(RequestHandler):
     def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
         RequestHandler.__init__(self, False, request, clientAddress, storagePath)
         self.data = b""
-        self.windowToSend = []
-        self.windowSending = []
+        self.windowToSend: list[int] = []
+        self.windowSending: list[int] = []
         self.ready = False
         self.response: Pocket = None
         self.pockets: list[Pocket] = []

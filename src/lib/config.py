@@ -4,9 +4,12 @@ import logging
 
 
 class Config:
-    FILE_PATH_MAX_LENGTH = 256
+    USER_ID: int = 1000
+    GROUP_ID: int = 1000
 
-    SOCKET_TIMEOUT: int = 0.1
+    FILE_PATH_MAX_LENGTH: int = 256
+
+    SOCKET_TIMEOUT: float = 0.1
     SOCKET_MAXSIZE: int = 4096
     CWND_START_VALUE: int = 1500
 

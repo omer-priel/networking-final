@@ -4,10 +4,10 @@ import logging
 import socket
 
 from src.app.config import config
-from src.lib.ftp import *
+from src.lib.ftp import BasicLayer, Pocket, PocketType, ResponseLayer
 
 # globals
-appSocket: socket.socket
+appSocket: socket.socket = ...  # type: ignore[assignment]
 lastRequestID = 0
 
 
@@ -25,14 +25,14 @@ def create_socket() -> None:
 
     appSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     appSocket.bind((config.APP_HOST, config.APP_PORT))
-    appSocket.setblocking(1)
+    appSocket.setblocking(True)
     appSocket.settimeout(config.SOCKET_TIMEOUT)
 
     logging.info("The app socket initialized on " + config.APP_HOST + ":" + str(config.APP_PORT))
 
 
 def sendto(pocket: Pocket, clientAddress: tuple[str, int]) -> None:
-    appSocket.sendto(pocket.to_bytes(), clientAddress)
+    appSocket.sendto(bytes(pocket), clientAddress)
 
 
 def recvfrom() -> tuple[bytes | None, tuple[str, int]]:

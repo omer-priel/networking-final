@@ -3,7 +3,7 @@ name = "networking-final"
 version = "0.1.0"
 description = ""
 authors = ["Omer Priel <omer.priel2@gmail.com>"]
-license = "MIT"
+license = "LICENSE"
 readme = "README.md"
 packages = [{include = "src"}]
 
@@ -20,6 +20,8 @@ jsbeautifier = "^1.14.7"
 [tool.poetry.group.dev.dependencies]
 isort = "^5.12.0"
 black = "^23.1.0"
+flake8 = "^6.0.0"
+mypy = "^1.0.1"
 
 [tool.black]
 target-version = ['py310']

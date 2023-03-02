@@ -28,12 +28,17 @@ def init_config() -> None:
     if os.path.isfile("src/app/.env"):
         load_dotenv("src/app/.env")
 
-    if os.getenv("APP_HOST"):
-        config.APP_HOST = os.getenv("APP_HOST")
-    if os.getenv("APP_PORT"):
-        config.APP_PORT = int(os.getenv("APP_PORT"))
-    if os.getenv("APP_STORAGE_PATH"):
-        config.APP_STORAGE_PATH = os.getenv("APP_STORAGE_PATH")
+    APP_HOST = os.getenv("APP_HOST")
+    if APP_HOST:
+        config.APP_HOST = APP_HOST
+
+    APP_PORT = os.getenv("APP_PORT")
+    if APP_PORT:
+        config.APP_PORT = int(APP_PORT)
+
+    APP_STORAGE_PATH = os.getenv("APP_STORAGE_PATH")
+    if APP_STORAGE_PATH:
+        config.APP_STORAGE_PATH = APP_STORAGE_PATH
 
 
 def init_logging() -> None:

@@ -74,6 +74,7 @@ DHCPOptionValue = bytes | str | int | MessageType | list[DHCPParameterRequest] |
 
 
 class DHCPPacket:
+    @staticmethod
     def from_bytes(data: bytes) -> DHCPPacket:
         offset = 0
 
@@ -113,7 +114,7 @@ class DHCPPacket:
                 if optionLength > 0:
                     optionValue = data[offset : offset + optionLength]
 
-                options[optionKey] = bytes2dhcpOptionValue(optionKey, optionValue)
+                options[DHCPOptionKey(optionKey)] = bytes2dhcpOptionValue(DHCPOptionKey(optionKey), optionValue)
 
             offset += optionLength
 
@@ -197,7 +198,11 @@ class DHCPPacket:
         return data
 
     def __repr__(self) -> str:
-        return "| op: {}, htype: {}, hlen: {}, hops: {}, xid: {}, secs: {}, flags: {},  client: {}, your: {}, server: {}, relay: {}, clientEthernetAddress: {}, magic-cookie: {}, options: {} |".format(
+        return (
+            "| op: {}, htype: {}, hlen: {}, hops: {}, xid: {}, secs: {}, flags: {}"
+            + ",  client: {}, your: {}, server: {}, relay: {}, client ethernet address: {}"
+            + ", magic-cookie: {}, options: {} |"
+        ).format(
             self.op,
             self.htype,
             self.hlen,
@@ -241,10 +246,10 @@ def bytes2dhcpOptionValue(key: DHCPOptionKey, data: bytes) -> DHCPOptionValue:
 
 def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
     if key == DHCPOptionKey.MessageType:
-        return struct.pack("B", int(value))
+        return struct.pack("B", int(value))  # type: ignore[arg-type]
 
     if key in [DHCPOptionKey.IPAddressLeaseTime, DHCPOptionKey.RenewalTime, DHCPOptionKey.RebindingTime]:
-        return struct.pack(">I", int(value))
+        return struct.pack(">I", int(value))  # type: ignore[arg-type]
 
     if key in [
         DHCPOptionKey.RequestedIPAddress,
@@ -254,10 +259,10 @@ def dhcpOptionValue2bytes(key: DHCPOptionKey, value: DHCPOptionValue) -> bytes:
         DHCPOptionKey.DomainNameServer,
         DHCPOptionKey.BroadcastAddress,
     ]:
-        return socket.inet_aton(value)
+        return socket.inet_aton(value)  # type: ignore[arg-type]
 
     if key == DHCPOptionKey.ParamterRequestList:
-        arr = [int(item) for item in value if int(item) != 0]
+        arr = [int(item) for item in value if int(item) != 0]  # type: ignore[union-attr]
         return bytes(arr)
 
-    return value
+    return value  # type: ignore[return-value]

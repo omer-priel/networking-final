@@ -10,10 +10,20 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
-from src.app.handlers import *
-from src.app.rudp import *
-from src.app.storage import *
-from src.lib.ftp import *
+import jsbeautifier  # type: ignore
+
+from src.app.config import config
+from src.app.handlers import (
+    DownloadFileRequestHandler,
+    DownloadRequestHandler,
+    ListRequestHandler,
+    RequestHandler,
+    UploadFileRequestHandler,
+    UploadRequestHandler,
+)
+from src.app.rudp import recvfrom, send_close, send_error, sendto
+from src.app.storage import StorageData, UserData
+from src.lib.ftp import AKCLayer, BasicLayer, Pocket, PocketSubType, PocketType, ResponseLayer, SegmentLayer
 
 # globals
 executor = ThreadPoolExecutor(2)
@@ -64,7 +74,7 @@ def main_loop() -> None:
                         handler.ready = True
                         notReady.pop(handler.get_requestID())
 
-                        def downloading_task(handler: DownloadRequestHandler):
+                        def downloading_task(handler: DownloadRequestHandler) -> None:
                             global handlers, handlersLock
 
                             handler.locker.acquire()
@@ -137,9 +147,11 @@ def main_loop() -> None:
                                         handler.windowToSend = handler.windowSending + handler.windowToSend
                                         handler.windowSending = []
                                         cwndMax = cwnd
-                                        cwnd = max(cwnd / 2, 1)
+                                        cwnd = int(max(cwnd / 2, 1))
                                     else:
-                                        cwnd = max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1)
+                                        cwnd = int(
+                                            max(C * ((rtt - (cwndMax * (1 - B) / C) ** (1 / 3)) ** 3) + cwndMax, 1)
+                                        )
 
                                     rtt = time.time() - last
                                     last = time.time()
@@ -188,7 +200,9 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
             storageData.users[request.requestLayer.userName] = userData
 
             with open(config.APP_STORAGE_PATH + config.STORAGE_DATA, "w") as f:
-                f.write(storageData.json())
+                opts = jsbeautifier.default_options()
+                opts.indent_size = 2
+                f.write(jsbeautifier.beautify(storageData.json(), opts))
 
         storagePath = config.APP_STORAGE_PATH + config.STORAGE_PRIVATE + "/" + userData.id + "/"
 
