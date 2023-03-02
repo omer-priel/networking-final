@@ -5,7 +5,7 @@ import os
 import os.path
 import time
 
-import jsbeautifier
+import jsbeautifier  # type: ignore
 from pydantic import BaseModel
 
 from src.dhcp.config import config

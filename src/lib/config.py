@@ -6,7 +6,7 @@ import logging
 class Config:
     FILE_PATH_MAX_LENGTH = 256
 
-    SOCKET_TIMEOUT: int = 0.1
+    SOCKET_TIMEOUT: float = 0.1
     SOCKET_MAXSIZE: int = 4096
     CWND_START_VALUE: int = 1500
 

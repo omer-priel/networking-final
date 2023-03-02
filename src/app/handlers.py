@@ -4,7 +4,7 @@ import logging
 import os
 import os.path
 import threading
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 
 from src.app.config import config
 from src.app.rudp import create_new_requestID, send_error
@@ -21,9 +21,9 @@ class RequestHandler(ABC):
         self.requestID = 0
         self._storagePath = storagePath
 
-    @abstractclassmethod
+    @abstractmethod
     def route(self) -> tuple[Pocket, bytes | None] | None:
-        pass
+        ...
 
     def get_client_address(self) -> tuple[str, int]:
         return self._clientAddress
@@ -44,9 +44,9 @@ class UploadRequestHandler(RequestHandler):
         self.segments: dict[int, bytes] = {}
         self.segmentsAmount = 0
 
-    @abstractclassmethod
+    @abstractmethod
     def post_upload(self, data: bytes) -> None:
-        pass
+        ...
 
 
 class DownloadRequestHandler(RequestHandler):

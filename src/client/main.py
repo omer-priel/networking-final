@@ -60,7 +60,7 @@ def create_socket() -> None:
 
     clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     clientSocket.bind(options.clientAddress)
-    clientSocket.setblocking(1)
+    clientSocket.setblocking(True)
     clientSocket.settimeout(config.SOCKET_TIMEOUT)
 
     print("The client socket initialized on " + options.clientAddress[0] + ":" + str(options.clientAddress[1]))

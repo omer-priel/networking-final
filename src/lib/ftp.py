@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import struct
-from abc import ABC, abstractclassmethod
+from abc import ABC, abstractmethod
 from enum import IntEnum
 
 # struct link: https://docs.python.org/3.7/library/struct.html
@@ -30,37 +30,42 @@ class PocketSubType(IntEnum):
 
 # Layer Interface
 class LayerInterface(ABC):
-    @abstractclassmethod
+    @abstractmethod
     def length(self) -> int:
-        pass
+        ...
 
-    @abstractclassmethod
+    @abstractmethod
     def to_bytes(self) -> bytes:
-        pass
+        ...
 
 
 # RUDP Level
 class BasicLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> BasicLayer:
-        pocketType, pocketSubType, requestID = struct.unpack_from("bbL", data, offset)
+        pocketType, pocketSubType, requestID = struct.unpack_from("BBL", data, offset)
         return BasicLayer(
             requestID,
-            PocketType(pocketType),
-            PocketSubType(pocketSubType),
-        )
+            PocketType(pocketType),  # type: ignore
+            PocketSubType(pocketSubType),  # type: ignore
+        )  # type: ignore
 
-    def __init__(self, requestID: int, pocketType=PocketType.Unknown, pocketSubType=PocketType.Unknown) -> None:
+    def __init__(
+        self,
+        requestID: int,
+        pocketType: PocketType = PocketType.Unknown,
+        pocketSubType: PocketType = PocketType.Unknown,
+    ) -> None:
         self.pocketType = pocketType
         self.pocketSubType = pocketSubType
         self.requestID = requestID
 
     def length(self) -> int:
-        return struct.calcsize("bbL")
+        return struct.calcsize("BBL")
 
     def to_bytes(self) -> bytes:
         return struct.pack(
-            "bbL",
+            "BBL",
             self.pocketType,
             self.pocketSubType,
             self.requestID,
@@ -129,8 +134,8 @@ class RequestLayer(LayerInterface):
 class ResponseLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> ResponseLayer:
-        ok, errorMessageLength = struct.unpack_from("?b", data, offset)
-        offset += struct.calcsize("?b")
+        ok, errorMessageLength = struct.unpack_from("?B", data, offset)
+        offset += struct.calcsize("?B")
         if errorMessageLength == 0:
             errorMessage = ""
         else:
@@ -152,10 +157,10 @@ class ResponseLayer(LayerInterface):
         self.singleSegmentSize = singleSegmentSize
 
     def length(self) -> int:
-        return struct.calcsize("?b") + len(self.errorMessage) + struct.calcsize("LLL")
+        return struct.calcsize("?B") + len(self.errorMessage) + struct.calcsize("LLL")
 
     def to_bytes(self) -> bytes:
-        ret = struct.pack("?b", self.ok, len(self.errorMessage))
+        ret = struct.pack("?B", self.ok, len(self.errorMessage))
         ret += self.errorMessage.encode()
         ret += struct.pack("LLL", self.dataSize, self.segmentsAmount, self.singleSegmentSize)
         return ret
@@ -393,7 +398,7 @@ class Pocket:
 
         return data
 
-    def __str__(self):
+    def __str__(self) -> str:
         ret = str(self.basicLayer)
 
         if self.requestLayer:

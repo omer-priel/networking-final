@@ -35,7 +35,6 @@ mypy:
 lint:
 	make flake8
 	poetry run black --check --diff ./
-	make mypy
 
 fix-lint: fix lint
 

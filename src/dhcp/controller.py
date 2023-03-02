@@ -14,7 +14,7 @@ def create_socket(database: Database) -> socket.socket:
     dhcpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     dhcpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     dhcpSocket.setsockopt(socket.SOL_SOCKET, 25, database.network_interface.encode())
-    dhcpSocket.setblocking(1)
+    dhcpSocket.setblocking(True)
     dhcpSocket.settimeout(config.SOCKET_TIMEOUT)
     dhcpSocket.bind(("0.0.0.0", config.SERVER_PORT))
 
