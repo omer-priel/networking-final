@@ -18,7 +18,7 @@ def create_socket(database: Database) -> socket.socket:
     dhcpSocket.settimeout(config.SOCKET_TIMEOUT)
     dhcpSocket.bind(("0.0.0.0", config.SERVER_PORT))
 
-    logging.info("The dhcp socket initialized from port {}".format(config.SERVER_PORT))
+    logging.info("The dhcp socket initialized on port {}".format(config.SERVER_PORT))
     return dhcpSocket
 
 

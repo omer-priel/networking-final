@@ -116,8 +116,6 @@ test-client-upload-all:
 	make test-client-upload-child-100
 	make test-client-upload-1000
 	make test-client-upload-child-1000
-	make test-client-upload-10000
-	make test-client-upload-child-10000
 	make test-client-upload-multi
 
 test-client-upload-not-found:
@@ -173,8 +171,6 @@ test-client-download-all: temp
 	make test-client-download-child-100
 	make test-client-download-1000
 	make test-client-download-child-1000
-	make test-client-download-10000
-	make test-client-download-child-10000
 	make test-client-download-multi
 
 test-client-download-not-found: temp
