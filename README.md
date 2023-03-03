@@ -1,8 +1,8 @@
 # Networking Final
 
 At first, this is a final project of networking. \
-The project contains 4 subprojects: app, client, dhcp and dns. \
-\
+The project contains 4 subprojects: app, client, dhcp and dns.
+
 The app is server based RUDP for storage like FTP. The server support download, upload and list requests. \
 In addition, the clients can be anonymously or with user name and password.\
 Client Help:
@@ -22,10 +22,9 @@ Options:
 --client-port <port> - set the client port, defualt: 8001
 ```
 
-The DHCP server are simple DHCP that based on only python and json file for saving the data.\
-\
-The DNS ... \
-\
+The DHCP server are simple DHCP that based on only python and json file for saving the data.
+
+The DNS ...
 
 ## Folders Structure
 
@@ -237,9 +236,9 @@ and file is
 ## DHCP Server
 
 Config: \
-Recive from port 67 and reply on port 68 \
+Recive from port 67 and reply on port 68
 
-dhcp.json fields: \
+dhcp.json fields:
 
 * server_address - DHCP server IP Address
 * network_interface - DHCP listening network interface
