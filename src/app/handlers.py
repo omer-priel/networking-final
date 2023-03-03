@@ -14,8 +14,7 @@ from src.lib.ftp import BasicLayer, Pocket, PocketSubType, PocketType, pack_dire
 
 # interfaces
 class RequestHandler(ABC):
-    def __init__(self, uploadHandler: bool, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
-        self.uploadHandler = uploadHandler
+    def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
         self.request = request
         self._clientAddress = clientAddress
         self.requestID = 0
@@ -40,7 +39,7 @@ class RequestHandler(ABC):
 
 class UploadRequestHandler(RequestHandler):
     def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
-        RequestHandler.__init__(self, True, request, clientAddress, storagePath)
+        RequestHandler.__init__(self, request, clientAddress, storagePath)
         self.segments: dict[int, bytes] = {}
         self.segmentsAmount = 0
 
@@ -51,12 +50,12 @@ class UploadRequestHandler(RequestHandler):
 
 class DownloadRequestHandler(RequestHandler):
     def __init__(self, request: Pocket, clientAddress: tuple[str, int], storagePath: str):
-        RequestHandler.__init__(self, False, request, clientAddress, storagePath)
+        RequestHandler.__init__(self, request, clientAddress, storagePath)
         self.data = b""
         self.windowToSend: list[int] = []
         self.windowSending: list[int] = []
         self.ready = False
-        self.response: Pocket = None
+        self.response: Pocket = ...  # type: ignore[assignment]
         self.pockets: list[Pocket] = []
         self.locker = threading.Lock()
 
@@ -83,6 +82,7 @@ class UploadFileRequestHandler(UploadRequestHandler):
 
     def post_upload(self, data: bytes) -> None:
         # create the file
+        assert self.request.uploadRequestLayer
         filePath = self.get_path(self.request.uploadRequestLayer.path)
         directoyPath = os.path.dirname(filePath)
 

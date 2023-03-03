@@ -43,10 +43,11 @@ class Database(BaseModel):
             return False
         return ip not in self.ip_address_leases
 
-    def get_ip(self, wantIp: str) -> str | None:
+    def get_ip(self, wantIp: str | None) -> str | None:
         prefix = self.get_prefix()
-        if self.is_available(wantIp, prefix):
-            return wantIp
+        if wantIp:
+            if self.is_available(wantIp, prefix):
+                return wantIp
 
         for i in range(self.pool_range[0], self.pool_range[1] + 1):
             yourIP = prefix + str(i)

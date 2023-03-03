@@ -54,7 +54,7 @@ class BasicLayer(LayerInterface):
         self,
         requestID: int,
         pocketType: PocketType = PocketType.Unknown,
-        pocketSubType: PocketType = PocketType.Unknown,
+        pocketSubType: PocketSubType = PocketSubType.Unknown,
     ) -> None:
         self.pocketType = pocketType
         self.pocketSubType = pocketSubType

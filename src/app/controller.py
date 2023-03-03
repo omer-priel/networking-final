@@ -56,7 +56,7 @@ def main_loop() -> None:
                 result = create_handler(pocket, clientAddress)
                 if result:
                     handler, res = result
-                    if not handler.uploadHandler:
+                    if isinstance(handler, DownloadRequestHandler):
                         notReady[handler.get_requestID()] = res
 
                     handlersLock.acquire()
@@ -64,12 +64,12 @@ def main_loop() -> None:
                     handlersLock.release()
             elif pocket.basicLayer.requestID in handlers:
                 handler = handlers[pocket.basicLayer.requestID]
-                if handler.uploadHandler:
+                if isinstance(handler, UploadRequestHandler):
                     if not handle_upload_pocket(handler, pocket):
                         handlersLock.acquire()
                         handlers.pop(handler.get_requestID())
                         handlersLock.release()
-                else:
+                elif isinstance(handler, DownloadRequestHandler):
                     if not handler.ready:
                         handler.ready = True
                         notReady.pop(handler.get_requestID())
@@ -78,6 +78,7 @@ def main_loop() -> None:
                             global handlers, handlersLock
 
                             handler.locker.acquire()
+                            assert handler.response.responseLayer
                             singleSegmentSize = handler.response.responseLayer.singleSegmentSize
                             segmentsAmount = handler.response.responseLayer.segmentsAmount
                             dataSize = len(handler.data)
@@ -175,6 +176,8 @@ def main_loop() -> None:
 def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[RequestHandler, Pocket] | None:
     storagePath = config.APP_STORAGE_PATH + config.STORAGE_PUBLIC + "/"
 
+    assert request.requestLayer
+
     if not request.requestLayer.anonymous:
         # valid user
         if request.requestLayer.userName == "":
@@ -221,16 +224,17 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
 
     res, data = result
 
-    if handler.uploadHandler:
+    dataSize = 0
+    if isinstance(handler, UploadRequestHandler):
         dataSize = request.requestLayer.pocketFullSize
-    else:
+    elif data:
         dataSize = len(data)
 
     if dataSize == 0:
         res.responseLayer = ResponseLayer(True, "", 0, 0, 0)
         sendto(res, clientAddress)
 
-        if handler.uploadHandler:
+        if isinstance(handler, UploadRequestHandler):
             handler.post_upload(b"")
 
         return None
@@ -244,9 +248,10 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
 
     res.responseLayer = ResponseLayer(True, "", dataSize, segmentsAmount, singleSegmentSize)
 
-    if handler.uploadHandler:
+    if isinstance(handler, UploadRequestHandler):
         handler.segmentsAmount = segmentsAmount
-    else:
+    elif isinstance(handler, DownloadRequestHandler):
+        assert data is not None
         handler.data = data
         handler.windowToSend = list(range(segmentsAmount))
         handler.windowSending = []

@@ -43,7 +43,8 @@ def main_loop(database: Database) -> None:
         if DHCPOptionKey.MessageType not in packet.options:
             continue
 
-        reqType: MessageType = packet.options[DHCPOptionKey.MessageType]
+        reqType = packet.options[DHCPOptionKey.MessageType]
+        assert isinstance(reqType, MessageType)
         if reqType == MessageType.Unknown:
             continue
 

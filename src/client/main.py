@@ -30,7 +30,7 @@ from src.lib.ftp import (
 MAX_SEGMENT_SIZE = 1000  # [byte]
 
 # globals
-clientSocket: socket.socket = ...
+clientSocket: socket.socket = ...  # type: ignore[assignment]
 
 
 class Options:

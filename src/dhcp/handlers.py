@@ -37,13 +37,11 @@ def create_additional_options(database: Database, packet: DHCPPacket) -> dict[DH
     additional_options[DHCPOptionKey.SubnetMask] = database.subnet_mask
     additional_options[DHCPOptionKey.Router] = database.router
 
-    if DHCPOptionKey.ParamterRequestList in packet.options:
-        if DHCPParameterRequest.DomainNameServer in packet.options[DHCPOptionKey.ParamterRequestList] and database.dns:
+    paramterReqestList = packet.options[DHCPOptionKey.ParamterRequestList]
+    if DHCPOptionKey.ParamterRequestList in packet.options and isinstance(paramterReqestList, list):
+        if DHCPParameterRequest.DomainNameServer in paramterReqestList and database.dns:
             additional_options[DHCPOptionKey.DomainNameServer] = database.dns
-        if (
-            DHCPParameterRequest.BroadcastAddress in packet.options[DHCPOptionKey.ParamterRequestList]
-            and database.broadcast_address
-        ):
+        if DHCPParameterRequest.BroadcastAddress in paramterReqestList and database.broadcast_address:
             additional_options[DHCPOptionKey.BroadcastAddress] = database.broadcast_address
 
     return additional_options
@@ -54,12 +52,17 @@ def handle_discover(database: Database, packet: DHCPPacket) -> None:
     logging.info("Recive Discover")
 
     # create the offered address
-    yourIPAddress = ""
+    yourIPAddress: str | None = None
 
     if DHCPOptionKey.RequestedIPAddress in packet.options:
-        yourIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
+        requestedIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
+        assert isinstance(requestedIPAddress, str)
+        yourIPAddress = requestedIPAddress
 
     yourIPAddress = database.get_ip(yourIPAddress)
+
+    if not yourIPAddress:
+        return None
 
     # create the response
     packet.op = 2
@@ -102,6 +105,7 @@ def handle_request(database: Database, packet: DHCPPacket) -> None:
         return None
 
     requestedIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
+    assert isinstance(requestedIPAddress, str)  # mypy
 
     # save
     database.ip_address_leases[requestedIPAddress] = IPAddressLease(expired_time=int(time.time()) + database.lease_time)
@@ -138,6 +142,7 @@ def handle_request_validation(database: Database, packet: DHCPPacket) -> bool:
 
     # check if the requested ip address is available
     requestedIPAddress = packet.options[DHCPOptionKey.RequestedIPAddress]
+    assert isinstance(requestedIPAddress, str)  # mypy
 
     if not database.is_available(requestedIPAddress):
         logging.error("Request: The requested IP address is not available")
