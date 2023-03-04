@@ -60,6 +60,17 @@ make install
 
 ## App - Client
 
+### Description
+
+This is server for storage files, the server and the client sending packets over the UDP. But,
+same like TCP is reliable and optimize the network speed.
+
+The pockets are divided into three layers, Base Layer, RUDP layer and FTP layer. When the FTP layer exists only in the first packets.
+The flow, the client send request packet with the request fields (upload / download / list) and the auth fields (anonymous, user name and password).
+The server response with "ok" and error mesage if is not ok. In addition, it sends the size and the amount of segments. So, the client and the server be coordinated.
+
+Then, the sender - client if "upload" and server if "download" or "list" sends the packet according to Cubic and the other side return with ACK until it get all the segments. If it is upload then the server sends Close packet. Else, the client send Download Complited until the server sends Close.
+
 ### Environment Variables
 
 The Environment Variables will be declaerd in src/app/.env
@@ -72,7 +83,7 @@ The Environment Variables will be declaerd in src/app/.env
 
 ### Get Started
 
-Run for open command in the terminal for opening the server app:
+Run for open command in the terminal for opening the app server:
 
 ```bash
 make start-app
@@ -80,7 +91,7 @@ make start-app
 
 ### Testing
 
-At first, check that the server is running. affter that run the folow commands in the terminal:
+At first, check that the server is running. after that run the folow commands in the terminal:
 
 ```bash
 make test-client-help
@@ -234,6 +245,38 @@ and file is
 | 1 Byte           | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
 
 ## DHCP Server
+
+### Environment Variables
+
+The Environment Variables will be declaerd in src/dhcp/.env
+
+| Name          | Description                    |
+| ------------- | ------------------------------ |
+| SERVER_PORT   | DHCP port - 67                 |
+| CLIENT_PORT   | DHCP port - 68                 |
+| DATABASE_PATH | Relative path of the dhcp.json |
+
+### Get Started
+
+Run for open command in the terminal for opening the DHCP server:
+
+```bash
+make start-dhcp
+```
+
+### Testing
+
+At first, check that the server is running. after that run the folow commands in the terminal:
+
+```bash
+ip a
+sudo dhclient -r
+ip a
+sudo dhclient
+ip a
+```
+
+### Docs for development
 
 Config: \
 Recive from port 67 and reply on port 68
