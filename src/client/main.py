@@ -72,8 +72,8 @@ def upload_file(filename: str, destination: str) -> None:
         print('The file"' + filename + "\" don't exists!")
         return None
 
-    with open(filename, "r") as f:
-        fileBody = f.read().encode()
+    with open(filename, "rb") as f:
+        fileBody = f.read()
 
     bodySize = len(fileBody)
 
@@ -189,7 +189,7 @@ def download_file(filePath: str, destination: str) -> None:
 
     # remove if need the destination
     # create and remove again destination for checking
-    fileStream = open(destination, "a")
+    fileStream = open(destination, "ab")
     if not fileStream.writable():
         print('Error: The file "{}" is not writable!'.format(destination))
         fileStream.close()
@@ -225,8 +225,8 @@ def download_file(filePath: str, destination: str) -> None:
 
     if resPocket.responseLayer.dataSize == 0:
         # create the file
-        with open(destination, "a") as f:
-            f.write("")
+        with open(destination, "ab") as f:
+            f.write(b"")
 
         logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
         return None
@@ -304,8 +304,8 @@ def download_file(filePath: str, destination: str) -> None:
         fileBody += segment
 
     # create the file
-    with open(destination, "a") as f:
-        f.write(fileBody.decode())
+    with open(destination, "ab") as f:
+        f.write(fileBody)
 
     logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
 

@@ -29,6 +29,7 @@ The DNS ...
 ## Folders Structure
 
 * docs - Extra information
+* res - Resources directory
 * src - Source code
   * app - The application server
   * client - Client CLI for the application server

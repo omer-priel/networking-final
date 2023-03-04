@@ -95,6 +95,7 @@ test-client-upload-child-10000:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/10K.txt --dest child-dir/10K.txt
 
 test-client-upload-multi:
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/net.jpg
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/c/100.txt
@@ -159,6 +160,7 @@ test-client-download-child-10000: temp
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/10K.txt ./temp/child/10K.txt
 
 test-client-download-multi: temp
+	PYTHONPATH=. poetry run python src/client/main.py download net.jpg ./temp/net.jpg
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/b/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/c/100.txt

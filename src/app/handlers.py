@@ -96,8 +96,8 @@ class UploadFileRequestHandler(UploadRequestHandler):
             os.makedirs(directoyPath, exist_ok=True)
 
         # save the file
-        with open(filePath, "w") as f:
-            f.write(data.decode())
+        with open(filePath, "wb") as f:
+            f.write(data)
 
         logging.info('The file "{}" uploaded'.format(self.request.uploadRequestLayer.path))
 
@@ -119,8 +119,8 @@ class DownloadFileRequestHandler(DownloadRequestHandler):
             return None
 
         # read the file
-        with open(filePath, "r") as f:
-            data = f.read().encode()
+        with open(filePath, "rb") as f:
+            data = f.read()
 
         self.requestID = create_new_requestID()
         res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.Download))
