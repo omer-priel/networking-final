@@ -3,7 +3,7 @@
 At first, this is a final project of networking. \
 The project contains 4 subprojects: app, client, dhcp and dns.
 
-The app is server based RUDP for storage like FTP. The server support download, upload and list requests. \
+The app is server based RUDP for storage like FTP. The server support download, upload, list and delete requests. \
 In addition, the clients can be anonymously or with user name and password.\
 Client Help:
 
@@ -67,7 +67,7 @@ This is server for storage files, the server and the client sending packets over
 same like TCP is reliable and optimize the network speed.
 
 The pockets are divided into three layers, Base Layer, RUDP layer and FTP layer. When the FTP layer exists only in the first packets.
-The flow, the client send request packet with the request fields (upload / download / list) and the auth fields (anonymous, user name and password).
+The flow, the client send request packet with the request fields (upload / download / list / delete) and the auth fields (anonymous, user name and password).
 The server response with "ok" and error mesage if is not ok. In addition, it sends the size and the amount of segments. So, the client and the server be coordinated.
 
 Then, the sender - client if "upload" and server if "download" or "list" sends the packet according to Cubic and the other side return with ACK until it get all the segments. If it is upload then the server sends Close packet. Else, the client send Download Complited until the server sends Close.
@@ -119,6 +119,12 @@ make test-client-list-range
 make test-client-list-user-multi
 make test-client-list-user-without-password
 make test-client-list-user-recursive
+
+make test-client-delete-all
+make test-client-delete-user
+make test-client-delete-user-without-password
+make make test-client-delete-user-multi
+make test-client-delete-root
 
 make test-client-not-found
 ```
@@ -205,7 +211,7 @@ Type: 7
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Request Layer
-Path: path of the file on the server
+Path: path of file or directory on the server
 
 The Uploaded Data: \
 If the first byte is 1 then its file \
@@ -221,7 +227,7 @@ Else, if the first byte is 0 its a directory
 | 4 Bytes     | (Path Length) * Bytes |
 
 Type: Request Layer
-Path: path of the file on the server
+Path: path of file or directory on the server
 
 The Uploaded Data: \
 If the first byte is 1 then its file \
@@ -252,6 +258,23 @@ and file is
 | Is Directory - 0 | Name Length |         Name          | Updated At | File Size  |
 |------------------|-------------|-----------------------|------------|------------|
 | 1 Byte           | 4 Bytes     | (Name Length) * Bytes | 8 Bytes    | 8 Bytes    |
+
+**Delete Request Layer**
+
+| Path Length |         Path          |
+|-------------|-----------------------|
+| 4 Bytes     | (Path Length) * Bytes |
+
+Type: Request Layer
+Path: path of file or directory on the server
+
+**Delete Response Layer**
+
+| Is File |
+|---------|
+| 1 Byte  |
+
+Type: Request Layer
 
 ## DHCP Server
 
