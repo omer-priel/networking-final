@@ -205,41 +205,7 @@ def upload_file_or_directory(targetName: str, destination: str) -> None:
         print('The directory "{}" upload as "{}" to the app.'.format(targetName, destination))
 
 
-
-def download_file_or_directory(targetName: str, destination: str) -> None:
-    # check if the directory of destination exists
-    if os.path.isfile(destination):
-        os.remove(destination)
-    if os.path.isdir(destination):
-        shutil.rmtree(destination)
-
-    if not os.path.isdir(os.path.dirname(destination)):
-        os.mkdir(os.path.dirname(destination))
-
-    # send download request
-    reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Download))
-    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
-    reqPocket.downloadRequestLayer = DownloadRequestLayer(targetName)
-
-    logging.debug("send req pocket: " + str(reqPocket))
-
-    clientSocket.sendto(bytes(reqPocket), options.appAddress)
-
-    # recive download response
-    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-    resPocket = Pocket.from_bytes(data)
-
-    # handel response
-    logging.debug("get res pocket: " + str(resPocket))
-
-    if not resPocket.responseLayer:
-        print("Error: faild to download the file")
-        return None
-
-    if not resPocket.responseLayer.ok:
-        print("Error: " + resPocket.responseLayer.errorMessage)
-        return None
-
+def download_the_data(resPocket: Pocket) -> bytes:
     # init segments for downloading
     requestID = resPocket.basicLayer.requestID
 
@@ -312,6 +278,45 @@ def download_file_or_directory(targetName: str, destination: str) -> None:
     for segment in segments:
         data += segment
 
+    return data
+
+
+def download_file_or_directory(targetName: str, destination: str) -> None:
+    # check if the directory of destination exists
+    if os.path.isfile(destination):
+        os.remove(destination)
+    if os.path.isdir(destination):
+        shutil.rmtree(destination)
+
+    if not os.path.isdir(os.path.dirname(destination)):
+        os.mkdir(os.path.dirname(destination))
+
+    # send download request
+    reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Download))
+    reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
+    reqPocket.downloadRequestLayer = DownloadRequestLayer(targetName)
+
+    logging.debug("send req pocket: " + str(reqPocket))
+
+    clientSocket.sendto(bytes(reqPocket), options.appAddress)
+
+    # recive download response
+    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    resPocket = Pocket.from_bytes(data)
+
+    # handel response
+    logging.debug("get res pocket: " + str(resPocket))
+
+    if not resPocket.responseLayer:
+        print("Error: faild to download the file")
+        return None
+
+    if not resPocket.responseLayer.ok:
+        print("Error: " + resPocket.responseLayer.errorMessage)
+        return None
+
+    data = download_the_data(resPocket)
+
     isFile = struct.unpack_from("?", data)[0]
     data = data[struct.calcsize("?"):]
 
@@ -359,77 +364,7 @@ def send_list_command(directoryPath: str, recursive: bool) -> None:
         print_directory_content(b"")
         return None
 
-    # init segments for downloading
-    requestID = resPocket.basicLayer.requestID
-
-    segmentsAmount = resPocket.responseLayer.segmentsAmount
-
-    neededSegments = list(range(segmentsAmount))
-    segments = [b""] * segmentsAmount
-
-    # send ack for start downloading
-    readyPocket = Pocket(BasicLayer(requestID, PocketType.ReadyForDownloading))
-
-    logging.debug("send ready ack pocket: " + str(readyPocket))
-
-    # send ready pockets until segment comes
-    itFirstSegment = False
-
-    while not itFirstSegment:
-        clientSocket.sendto(bytes(readyPocket), options.appAddress)
-
-        try:
-            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-            segmentPocket = Pocket.from_bytes(data)
-            itFirstSegment = segmentPocket.basicLayer.pocketType == PocketType.Segment
-        except socket.error:
-            pass
-
-    # handle segments
-    while len(neededSegments) > 0:
-        try:
-            if itFirstSegment:
-                itFirstSegment = False
-            else:
-                data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-                segmentPocket = Pocket.from_bytes(data)
-
-            if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketType == PocketType.Segment):
-                logging.error("Get pocket that is not list segment")
-            else:
-                segmentID = segmentPocket.segmentLayer.segmentID
-                if segmentID in neededSegments:
-                    # add new segment
-                    neededSegments.remove(segmentID)
-                    segments[segmentID] = segmentPocket.segmentLayer.data
-
-                akcPocket = Pocket(BasicLayer(requestID, PocketType.ACK))
-                akcPocket.akcLayer = AKCLayer(segmentID)
-                clientSocket.sendto(bytes(akcPocket), options.appAddress)
-        except socket.error:
-            pass
-
-    # send complited list pocket to knowning the app that the list download complited
-    # until recive close pocket
-    complitedPocket = Pocket(BasicLayer(requestID, PocketType.DownloadComplited))
-    complitedPocket.akcLayer = AKCLayer(0)
-
-    closed = False
-
-    while not closed:
-        clientSocket.sendto(bytes(complitedPocket), options.appAddress)
-
-        try:
-            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
-            closePocket = Pocket.from_bytes(data)
-            closed = closePocket.basicLayer.pocketType == PocketType.Close
-        except socket.error:
-            pass
-
-    # combain the segments
-    data = b""
-    for segment in segments:
-        data += segment
+    data = download_the_data(resPocket)
 
     # print the directory content
     print_directory_content(data)
