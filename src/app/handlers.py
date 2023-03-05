@@ -1,8 +1,12 @@
 # FTP handlers
 
+from io import BytesIO
 import logging
 import os
 import os.path
+import shutil
+import struct
+import zipfile
 import threading
 from abc import ABC, abstractmethod
 
@@ -83,24 +87,34 @@ class UploadFileRequestHandler(UploadRequestHandler):
     def post_upload(self, data: bytes) -> None:
         # create the file
         assert self.request.uploadRequestLayer
-        filePath = self.get_path(self.request.uploadRequestLayer.path)
-        directoyPath = os.path.dirname(filePath)
+        targetPath = self.get_path(self.request.uploadRequestLayer.path)
+        directoyPath = os.path.dirname(targetPath)
 
-        # delete the file if already exists
-        if os.path.isfile(filePath):
-            os.remove(filePath)
+        # delete the file / directory if already exists
+        if os.path.isfile(targetPath):
+            os.remove(targetPath)
+        if os.path.isdir(targetPath):
+            shutil.rmtree(targetPath)
 
         if not directoyPath:
             directoyPath = "."
         elif not os.path.isdir(directoyPath):
             os.makedirs(directoyPath, exist_ok=True)
 
-        # save the file
-        with open(filePath, "wb") as f:
-            f.write(data)
+        isFile = struct.unpack_from("?", data)[0]
+        data = data[struct.calcsize("?"):]
 
-        logging.info('The file "{}" uploaded'.format(self.request.uploadRequestLayer.path))
-
+        if isFile:
+            # save the file
+            with open(targetPath, "wb") as f:
+                f.write(data)
+            logging.info('The file "{}" uploaded'.format(self.request.uploadRequestLayer.path))
+        else:
+            # save the directoy
+            zipFile = BytesIO(data)
+            with zipfile.ZipFile(zipFile, "r") as zip_archive:
+                zip_archive.extractall(targetPath)
+            logging.info('The directoy "{}" uploaded'.format(self.request.uploadRequestLayer.path))
 
 class DownloadFileRequestHandler(DownloadRequestHandler):
     def route(self) -> tuple[Pocket, bytes | None] | None:

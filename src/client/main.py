@@ -8,6 +8,7 @@ import socket
 import sys
 import time
 import zipfile
+import struct
 
 from prettytable import PrettyTable
 
@@ -93,8 +94,9 @@ def upload_file_or_directory(targetName: str, destination: str) -> None:
         archive.seek(0)
         fileBody = archive.read()
 
-    bodySize = len(fileBody)
+    fileBody = struct.pack("?", isFile) + fileBody
 
+    bodySize = len(fileBody)
     # create request pocket
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Upload))
     reqPocket.requestLayer = RequestLayer(
