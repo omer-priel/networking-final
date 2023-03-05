@@ -8,6 +8,7 @@ import socket
 import sys
 import time
 import zipfile
+import shutil
 import struct
 
 from prettytable import PrettyTable
@@ -128,13 +129,6 @@ def upload_file_or_directory(targetName: str, destination: str) -> None:
         return None
 
     # send the file / directory
-    if bodySize == 0:
-        if isFile:
-            print('The file "{}" upload as "{}" to the app.'.format(targetName, destination))
-        else:
-            print('The directory "{}" upload as "{}" to the app.'.format(targetName, destination))
-        return None
-
     requestID = resPocket.basicLayer.requestID
 
     singleSegmentSize = resPocket.responseLayer.singleSegmentSize
@@ -212,29 +206,20 @@ def upload_file_or_directory(targetName: str, destination: str) -> None:
 
 
 
-def download_file(filePath: str, destination: str) -> None:
+def download_file_or_directory(targetName: str, destination: str) -> None:
     # check if the directory of destination exists
     if os.path.isfile(destination):
         os.remove(destination)
-    elif not os.path.isdir(os.path.dirname(destination)):
+    if os.path.isdir(destination):
+        shutil.rmtree(destination)
+
+    if not os.path.isdir(os.path.dirname(destination)):
         os.mkdir(os.path.dirname(destination))
-
-    # remove if need the destination
-    # create and remove again destination for checking
-    fileStream = open(destination, "ab")
-    if not fileStream.writable():
-        print('Error: The file "{}" is not writable!'.format(destination))
-        fileStream.close()
-        os.remove(destination)
-        return None
-
-    fileStream.close()
-    os.remove(destination)
 
     # send download request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Download))
     reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
-    reqPocket.downloadRequestLayer = DownloadRequestLayer(filePath)
+    reqPocket.downloadRequestLayer = DownloadRequestLayer(targetName)
 
     logging.debug("send req pocket: " + str(reqPocket))
 
@@ -253,14 +238,6 @@ def download_file(filePath: str, destination: str) -> None:
 
     if not resPocket.responseLayer.ok:
         print("Error: " + resPocket.responseLayer.errorMessage)
-        return None
-
-    if resPocket.responseLayer.dataSize == 0:
-        # create the file
-        with open(destination, "ab") as f:
-            f.write(b"")
-
-        logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
         return None
 
     # init segments for downloading
@@ -331,15 +308,26 @@ def download_file(filePath: str, destination: str) -> None:
             pass
 
     # load body
-    fileBody = b""
+    data = b""
     for segment in segments:
-        fileBody += segment
+        data += segment
 
-    # create the file
-    with open(destination, "ab") as f:
-        f.write(fileBody)
+    isFile = struct.unpack_from("?", data)[0]
+    data = data[struct.calcsize("?"):]
 
-    logging.info('The file "{}" downloaded to "{}".'.format(filePath, destination))
+    if isFile:
+        # create the file
+        with open(destination, "ab") as f:
+            f.write(data)
+
+        logging.info('The file "{}" downloaded to "{}".'.format(targetName, destination))
+    else:
+        # create the directory
+        zipFile = BytesIO(data)
+        with zipfile.ZipFile(zipFile, "r") as zip_archive:
+            zip_archive.extractall(destination)
+
+        logging.info('The directory "{}" downloaded to "{}".'.format(targetName, destination))
 
 
 def send_list_command(directoryPath: str, recursive: bool) -> None:
@@ -587,7 +575,7 @@ def main() -> None:
         destination = sys.argv[i + 2]
 
         create_socket()
-        download_file(filePath, destination)
+        download_file_or_directory(filePath, destination)
 
     elif sys.argv[i] == "list":
         recursive = False

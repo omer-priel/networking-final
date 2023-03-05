@@ -162,10 +162,11 @@ test-client-download-child-10000: temp
 
 test-client-download-multi: temp
 	PYTHONPATH=. poetry run python src/client/main.py download net.jpg ./temp/net.jpg
-	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/b/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/a/c/100.txt
-	PYTHONPATH=. poetry run python src/client/main.py download child-dir/100.txt ./temp/b/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py download dir ./temp/dir
+	PYTHONPATH=. poetry run python src/client/main.py download a/100.txt ./temp/a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py download b/100.txt ./temp/b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py download a/c/100.txt ./temp/a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py download b/c/100.txt ./temp/b/c/100.txt
 
 test-client-download-all: temp
 	make test-client-download

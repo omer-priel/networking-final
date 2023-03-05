@@ -123,18 +123,36 @@ class DownloadFileRequestHandler(DownloadRequestHandler):
             self.send_error("This is not download request")
             return None
 
-        filePath = self.get_path(self.request.downloadRequestLayer.path)
-        if not os.path.isfile(filePath):
-            self.send_error('The file "{}" dos not exists!'.format(self.request.downloadRequestLayer.path))
-            return None
+        targetPath = self.get_path(self.request.downloadRequestLayer.path)
+        isFile = True
+        if not os.path.isfile(targetPath):
+            if not os.path.isdir(targetPath):
+                self.send_error('The file / directory "{}" dos not exists!'.format(self.request.downloadRequestLayer.path))
+                return None
+            isFile = False
 
         if not in_storage(self.request.downloadRequestLayer.path, self._storagePath):
-            self.send_error('The file "{}" dos not exists!'.format(self.request.downloadRequestLayer.path))
+            self.send_error('The file / directory "{}" dos not exists!'.format(self.request.downloadRequestLayer.path))
             return None
 
-        # read the file
-        with open(filePath, "rb") as f:
-            data = f.read()
+        data = struct.pack("?", isFile)
+
+        if isFile:
+            # read the file
+            with open(targetPath, "rb") as f:
+                data += f.read()
+        else:
+            # read the directory
+            archive = BytesIO()
+            with zipfile.ZipFile(archive, 'w') as zip_archive:
+                for root, dirs, files in os.walk(targetPath):
+                    for file in files:
+                        fileInfo = zipfile.ZipInfo(os.path.relpath(os.path.join(root, file), os.path.join(targetPath, self.get_path('.'))))
+                        with open(os.path.join(root, file), "rb") as f:
+                            zip_archive.writestr(fileInfo, f.read())
+
+            archive.seek(0)
+            data += archive.read()
 
         self.requestID = create_new_requestID()
         res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.Download))
