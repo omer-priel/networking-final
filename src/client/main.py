@@ -117,7 +117,10 @@ def upload_file_or_directory(targetName: str, destination: str) -> None:
     logging.debug("get res pocket: " + str(resPocket))
 
     if not resPocket.responseLayer:
-        print("Error: faild to send the file")
+        if isFile:
+            print("Error: faild to upload the file")
+        else:
+            print("Error: faild to upload the directory")
         return None
 
     if not resPocket.responseLayer.ok:
