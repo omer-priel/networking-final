@@ -459,8 +459,8 @@ def print_directory_content(data: bytes) -> None:
 def print_help() -> None:
     print('client is CLI client for custom app like "FTP" based on UDP.')
     print("  client --help                                          - print the help content")
-    print("  client [options] upload [--dest <destination>] <file>  - upload file")
-    print("  client [options] download <remote file> [destination]  - download file")
+    print("  client [options] upload [--dest <destination>] <file / directory>  - upload file or directory")
+    print("  client [options] download <remote file / directory> [destination]  - download file or directory")
     print("  client [options] list [remote directory] [--recursive] - print directory content")
     print("Options:")
     print("--user <user name>    - set user name")

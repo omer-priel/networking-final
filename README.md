@@ -10,8 +10,8 @@ Client Help:
 ```terminal
 client is CLI client for custom app like "FTP" based on UDP.
   client --help                                          - print the help content
-  client [options] upload [--dest <destination>] <file>  - upload file
-  client [options] download <remote file> [destination]  - download file
+  client [options] upload [--dest <destination>] <file / directory>  - upload file or directory
+  client [options] download <remote file / directory> [destination]  - download file or directory
   client [options] list [remote directory] [--recursive] - print directory content
 Options:
 --user <user name>    - set user name
@@ -127,8 +127,8 @@ make test-client-not-found
 
 Every Request / Response are made from Base Layer and the content layer
 
-* Upload
-* Download
+* Upload - Upload File / Directory
+* Download - Download File / Directory
 * List
 
 #### RUDP Level
@@ -207,8 +207,12 @@ Type: 7
 Type: Request Layer
 Path: path of the file on the server
 
-* If the file exists, delete it
-* Create the file
+The Uploaded Data: \
+If the first byte is 1 then its file \
+Else, if the first byte is 0 its a directory
+
+* If exists file or directory, delete it
+* Create the file / directory
 
 **Download Request Layer**
 
@@ -219,7 +223,11 @@ Path: path of the file on the server
 Type: Request Layer
 Path: path of the file on the server
 
-* Can't download file that dos not exists
+The Uploaded Data: \
+If the first byte is 1 then its file \
+Else, if the first byte is 0 its a directory
+
+* Can't download file / directory that dos not exists
 
 **List Request Layer**
 
