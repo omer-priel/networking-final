@@ -11,9 +11,10 @@ from enum import IntEnum
 
 # Enums
 
+
 class PocketType(IntEnum):
-    """Type of packet of app
-    """
+    """Type of packet of app"""
+
     Unknown = 0
     Request = 1
     Response = 2
@@ -25,18 +26,19 @@ class PocketType(IntEnum):
 
 
 class PocketSubType(IntEnum):
-    """Request type
-    """
+    """Request type"""
+
     Unknown = 0
     Upload = 1
     Download = 2
     List = 3
+    Delete = 4
 
 
 # Layer Interface
 class LayerInterface(ABC):
-    """Interface of all the packet layers
-    """
+    """Interface of all the packet layers"""
+
     @abstractmethod
     def __len__(self) -> int:
         """Return the length in bytes of the layer
@@ -58,8 +60,8 @@ class LayerInterface(ABC):
 
 # RUDP Level
 class BasicLayer(LayerInterface):
-    """The base layer of all the packets
-    """
+    """The base layer of all the packets"""
+
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> BasicLayer:
         pocketType, pocketSubType, requestID = struct.unpack_from("BBL", data, offset)
@@ -243,8 +245,8 @@ class SegmentLayer(LayerInterface):
 
 
 class AKCLayer(LayerInterface):
-    """AKC for a segment
-    """
+    """AKC for a segment"""
+
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> AKCLayer:
         segmentID = struct.unpack_from("L", data, offset)[0]
@@ -269,8 +271,8 @@ class AKCLayer(LayerInterface):
 
 # FTP Level
 class UploadRequestLayer(LayerInterface):
-    """Upload file Request Layer over RequestLayer
-    """
+    """Upload file Request Layer over RequestLayer"""
+
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> UploadRequestLayer:
         filePathLength = struct.unpack_from("I", data, offset)[0]
@@ -298,8 +300,8 @@ class UploadRequestLayer(LayerInterface):
 
 
 class DownloadRequestLayer(LayerInterface):
-    """Download file Request layer over RequestLayer
-    """
+    """Download file Request layer over RequestLayer"""
+
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> DownloadRequestLayer:
         filePathLength = struct.unpack_from("I", data, offset)[0]
@@ -328,8 +330,8 @@ class DownloadRequestLayer(LayerInterface):
 
 
 class ListRequestLayer(LayerInterface):
-    """List Request layer over RequestLayer
-    """
+    """List Request layer over RequestLayer"""
+
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> ListRequestLayer:
         directoryPathLength = struct.unpack_from("I", data, offset)[0]
@@ -360,6 +362,64 @@ class ListRequestLayer(LayerInterface):
 
     def __str__(self) -> str:
         return " directory path: {}, recursive: {} |".format(self.path, self.recursive)
+
+
+class DeleteRequestLayer(LayerInterface):
+    """Delete Request layer over RequestLayer"""
+
+    @staticmethod
+    def from_bytes(data: bytes, offset: int) -> DeleteRequestLayer:
+        targetPathLength = struct.unpack_from("I", data, offset)[0]
+        offset += struct.calcsize("I")
+        targetPath = data[offset : offset + targetPathLength]
+        offset += targetPathLength
+
+        return DeleteRequestLayer(bytes.decode(targetPath))
+
+    def __init__(self, targetPath: str) -> None:
+        """
+
+        Args:
+            targetPath (str): file / directory path on the server
+        """
+        self.path = targetPath
+
+    def __len__(self) -> int:
+        return struct.calcsize("I") + len(self.path)
+
+    def __bytes__(self) -> bytes:
+        return struct.pack("I", len(self.path)) + self.path.encode()
+
+    def __str__(self) -> str:
+        return " target path: {} |".format(self.path)
+
+
+class DeleteResponseLayer(LayerInterface):
+    """Delete Response layer over ResponseLayer"""
+
+    @staticmethod
+    def from_bytes(data: bytes, offset: int) -> DeleteResponseLayer:
+        isFile = struct.unpack_from("?", data, offset)[0]
+        offset += struct.calcsize("?")
+
+        return DeleteResponseLayer(isFile)
+
+    def __init__(self, isFile: bool) -> None:
+        """
+
+        Args:
+            targetPath (str): file / directory path on the server
+        """
+        self.isFile = isFile
+
+    def __len__(self) -> int:
+        return struct.calcsize("?")
+
+    def __bytes__(self) -> bytes:
+        return struct.pack("?", self.isFile)
+
+    def __str__(self) -> str:
+        return " is file: {} |".format(self.isFile)
 
 
 def unpack_block_type(data: bytes, offset: int) -> tuple[bool, int]:
@@ -463,8 +523,8 @@ def unpack_file_block(data: bytes, offset: int) -> tuple[tuple[str, float, int],
 # A socket pocket
 # with parsing and saving all the layers of the app
 class Pocket:
-    """Represent a single pocket
-    """
+    """Represent a single pocket"""
+
     @staticmethod
     def from_bytes(data: bytes) -> Pocket:
         """Load pocket from bytes
@@ -490,9 +550,15 @@ class Pocket:
                 pocket.downloadRequestLayer = DownloadRequestLayer.from_bytes(data, offset)
             elif basicLayer.pocketSubType == PocketSubType.List:
                 pocket.listRequestLayer = ListRequestLayer.from_bytes(data, offset)
+            elif basicLayer.pocketSubType == PocketSubType.Delete:
+                pocket.deleteRequestLayer = DeleteRequestLayer.from_bytes(data, offset)
 
         elif basicLayer.pocketType == PocketType.Response:
             pocket.responseLayer = ResponseLayer.from_bytes(data, offset)
+            offset += len(pocket.responseLayer)
+            if basicLayer.pocketSubType == PocketSubType.Delete:
+                pocket.deleteResponseLayer = DeleteResponseLayer.from_bytes(data, offset)
+
         elif basicLayer.pocketType == PocketType.Segment:
             pocket.segmentLayer = SegmentLayer.from_bytes(data, offset)
         elif basicLayer.pocketType == PocketType.ACK:
@@ -515,6 +581,9 @@ class Pocket:
         self.uploadRequestLayer: UploadRequestLayer | None = None
         self.downloadRequestLayer: DownloadRequestLayer | None = None
         self.listRequestLayer: ListRequestLayer | None = None
+        self.deleteRequestLayer: DeleteRequestLayer | None = None
+
+        self.deleteResponseLayer: DeleteResponseLayer | None = None
 
     def __bytes__(self) -> bytes:
         data = bytes(self.basicLayer)
@@ -527,8 +596,12 @@ class Pocket:
                 data += bytes(self.downloadRequestLayer)
             elif self.listRequestLayer:
                 data += bytes(self.listRequestLayer)
+            elif self.deleteRequestLayer:
+                data += bytes(self.deleteRequestLayer)
         elif self.responseLayer:
             data += bytes(self.responseLayer)
+            if self.deleteResponseLayer:
+                data += bytes(self.deleteResponseLayer)
         elif self.segmentLayer:
             data += bytes(self.segmentLayer)
         elif self.akcLayer:
@@ -547,8 +620,12 @@ class Pocket:
                 ret += str(self.downloadRequestLayer)
             elif self.listRequestLayer:
                 ret += str(self.listRequestLayer)
+            elif self.deleteRequestLayer:
+                ret += str(self.deleteRequestLayer)
         elif self.responseLayer:
             ret += str(self.responseLayer)
+            if self.deleteResponseLayer:
+                ret += str(self.deleteResponseLayer)
         elif self.segmentLayer:
             ret += str(self.segmentLayer)
         elif self.akcLayer:

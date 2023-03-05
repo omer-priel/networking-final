@@ -5,10 +5,10 @@ import os
 import os.path
 import socket
 import sys
-from src.client.commands import upload_command, download_command, list_command
 
-from src.lib.config import config, init_logging
+from src.client.commands import delete_command, download_command, list_command, upload_command
 from src.client.options import Options
+from src.lib.config import config, init_logging
 
 
 def init_app() -> None:
@@ -33,10 +33,11 @@ def create_socket(options: Options) -> socket.socket:
 
 def print_help() -> None:
     print('client is CLI client for custom app like "FTP" based on UDP.')
-    print("  client --help                                          - print the help content")
+    print("  client --help                                                      - print the help content")
     print("  client [options] upload [--dest <destination>] <file / directory>  - upload file or directory")
     print("  client [options] download <remote file / directory> [destination]  - download file or directory")
-    print("  client [options] list [remote directory] [--recursive] - print directory content")
+    print("  client [options] list [remote directory] [--recursive]             - print directory content")
+    print("  client [options] delete <remote file / directory>                  - delete file or directory")
     print("Options:")
     print("--user <user name>    - set user name")
     print("--password <password> - set user password, require --user")
@@ -114,7 +115,7 @@ def main() -> None:
         return None
 
     if sys.argv[i] == "upload":
-        filename = None
+        targetPath = None
         destination = None
 
         i += 1
@@ -126,31 +127,31 @@ def main() -> None:
                 destination = sys.argv[i + 1]
                 i += 1
             else:
-                filename = sys.argv[i]
+                targetPath = sys.argv[i]
             i += 1
 
-        if not filename:
-            print("Missing file path to upload")
+        if not targetPath:
+            print("Missing file / directory path to upload")
             return None
 
         if not destination:
-            destination = os.path.basename(filename)
+            destination = os.path.basename(targetPath)
 
         clientSocket = create_socket(options)
-        upload_command(clientSocket, options, filename, destination)
+        upload_command(clientSocket, options, targetPath, destination)
     elif sys.argv[i] == "download":
         if len(sys.argv) == i + 1:
-            print("File path and destination path are Missing!")
+            print("File / directory path and destination path are Missing!")
             return None
         if len(sys.argv) == i + 2:
             print("Destination path are Missing!")
             return None
 
-        filePath = sys.argv[i + 1]
+        targetPath = sys.argv[i + 1]
         destination = sys.argv[i + 2]
 
         clientSocket = create_socket(options)
-        download_command(clientSocket, options, filePath, destination)
+        download_command(clientSocket, options, targetPath, destination)
 
     elif sys.argv[i] == "list":
         recursive = False
@@ -166,6 +167,16 @@ def main() -> None:
 
         clientSocket = create_socket(options)
         list_command(clientSocket, options, directoryPath, recursive)
+    elif sys.argv[i] == "delete":
+        if len(sys.argv) == i + 1:
+            print("File / directory path is Missing!")
+            return None
+
+        targetPath = sys.argv[i + 1]
+
+        clientSocket = create_socket(options)
+        delete_command(clientSocket, options, targetPath)
+
     else:
         print('The command "{}" not exists'.format(sys.argv[i]))
 

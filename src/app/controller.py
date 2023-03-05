@@ -14,6 +14,7 @@ import jsbeautifier  # type: ignore
 
 from src.app.config import config
 from src.app.handlers import (
+    DeleteRequestHandler,
     DownloadFileRequestHandler,
     DownloadRequestHandler,
     ListRequestHandler,
@@ -217,6 +218,8 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
         handler = DownloadFileRequestHandler(request, clientAddress, storagePath)
     elif request.basicLayer.pocketSubType == PocketSubType.List:
         handler = ListRequestHandler(request, clientAddress, storagePath)
+    elif request.basicLayer.pocketSubType == PocketSubType.Delete:
+        handler = DeleteRequestHandler(request, clientAddress, storagePath)
 
     result = handler.route()
     if not result:

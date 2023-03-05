@@ -106,7 +106,6 @@ test-client-upload-multi:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/c/100.txt
 
 test-client-upload-range:
-			PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/c/100.txt
 	for i in {1..10..2}; do \
 		PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest range/$$i-$$i/$$i.txt ;\
 		for j in {1..10..1}; do \
@@ -236,8 +235,59 @@ test-client-list-user-recursive:
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list --recursive
 	PYTHONPATH=. poetry run python src/client/main.py --user bar list --recursive
 
-test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found
+test-client-delete:
+	PYTHONPATH=. poetry run python src/client/main.py delete A.md
 
+test-client-delete-100:
+	PYTHONPATH=. poetry run python src/client/main.py delete 100.txt
+
+test-client-delete-child:
+	PYTHONPATH=. poetry run python src/client/main.py delete child-dir
+
+test-client-delete-multi:
+	PYTHONPATH=. poetry run python src/client/main.py delete net.jpg
+	PYTHONPATH=. poetry run python src/client/main.py delete dir
+	PYTHONPATH=. poetry run python src/client/main.py delete a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py delete b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py delete a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py delete b/c/100.txt
+
+test-client-delete-range:
+	for i in {1..10..2}; do \
+		PYTHONPATH=. poetry run python src/client/main.py delete range/$$i-$$i/$$i.txt ;\
+		for j in {1..10..1}; do \
+			PYTHONPATH=. poetry run python src/client/main.py delete range/$$i-$$j.txt ;\
+		done; \
+	done;
+
+test-client-delete-all:
+	make test-client-delete
+	make test-client-delete-child
+	make test-client-delete-100
+	make test-client-delete-multi
+
+test-client-delete-not-found:
+	PYTHONPATH=. poetry run python src/client/main.py delete ../100.txt
+	PYTHONPATH=. poetry run python src/client/main.py delete abdasda
+
+test-client-delete-user:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent delete A.md
+
+test-client-delete-user-without-password:
+	PYTHONPATH=. poetry run python src/client/main.py --user bar delete A.md
+
+test-client-delete-user-multi:
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent delete a/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent delete b/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent delete a/c/100.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent delete b/c/100.txt
+
+test-client-delete-root:
+	PYTHONPATH=. poetry run python src/client/main.py delete .
+	PYTHONPATH=. poetry run python src/client/main.py --user bar delete .
+	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent delete .
+
+test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found test-client-delete-not-found
 
 test-dhcp-release:
 	sudo dhclient -r
@@ -267,6 +317,3 @@ dhcp-edit-config-file:
 
 dhcp-edit-leases-file:
 	sudo nano /var/lib/dhcp/dhclient.leases
-
-dhcp-fix-permissions:
-	sudo chown -R $(USER): storage

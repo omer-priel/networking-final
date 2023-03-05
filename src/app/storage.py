@@ -37,7 +37,7 @@ def init_strorage() -> None:
 
 
 def get_path(path: str, storagePath: str) -> str:
-    return storagePath + path
+    return os.path.abspath(os.path.join(storagePath, path))
 
 
 def in_storage(path: str, storagePath: str) -> bool:

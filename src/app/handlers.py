@@ -1,19 +1,27 @@
 # FTP handlers
 
-from io import BytesIO
 import logging
 import os
 import os.path
 import shutil
 import struct
-import zipfile
 import threading
+import zipfile
 from abc import ABC, abstractmethod
+from io import BytesIO
 
 from src.app.config import config
 from src.app.rudp import create_new_requestID, send_error
 from src.app.storage import get_path, in_storage
-from src.lib.ftp import BasicLayer, Pocket, PocketSubType, PocketType, pack_directory_block, pack_file_block
+from src.lib.ftp import (
+    BasicLayer,
+    DeleteResponseLayer,
+    Pocket,
+    PocketSubType,
+    PocketType,
+    pack_directory_block,
+    pack_file_block,
+)
 
 
 # interfaces
@@ -102,7 +110,7 @@ class UploadFileRequestHandler(UploadRequestHandler):
             os.makedirs(directoyPath, exist_ok=True)
 
         isFile = struct.unpack_from("?", data)[0]
-        data = data[struct.calcsize("?"):]
+        data = data[struct.calcsize("?") :]
 
         if isFile:
             # save the file
@@ -116,6 +124,7 @@ class UploadFileRequestHandler(UploadRequestHandler):
                 zip_archive.extractall(targetPath)
             logging.info('The directoy "{}" uploaded'.format(self.request.uploadRequestLayer.path))
 
+
 class DownloadFileRequestHandler(DownloadRequestHandler):
     def route(self) -> tuple[Pocket, bytes | None] | None:
         # validation
@@ -127,7 +136,9 @@ class DownloadFileRequestHandler(DownloadRequestHandler):
         isFile = True
         if not os.path.isfile(targetPath):
             if not os.path.isdir(targetPath):
-                self.send_error('The file / directory "{}" dos not exists!'.format(self.request.downloadRequestLayer.path))
+                self.send_error(
+                    'The file / directory "{}" dos not exists!'.format(self.request.downloadRequestLayer.path)
+                )
                 return None
             isFile = False
 
@@ -144,10 +155,12 @@ class DownloadFileRequestHandler(DownloadRequestHandler):
         else:
             # read the directory
             archive = BytesIO()
-            with zipfile.ZipFile(archive, 'w') as zip_archive:
+            with zipfile.ZipFile(archive, "w") as zip_archive:
                 for root, dirs, files in os.walk(targetPath):
                     for file in files:
-                        fileInfo = zipfile.ZipInfo(os.path.relpath(os.path.join(root, file), os.path.join(targetPath, self.get_path('.'))))
+                        fileInfo = zipfile.ZipInfo(
+                            os.path.relpath(os.path.join(root, file), os.path.join(targetPath, self.get_path(".")))
+                        )
                         with open(os.path.join(root, file), "rb") as f:
                             zip_archive.writestr(fileInfo, f.read())
 
@@ -209,3 +222,48 @@ class ListRequestHandler(DownloadRequestHandler):
             data += pack_file_block(parent + fileName, updatedAt, fileSize)
 
         return data
+
+
+class DeleteRequestHandler(DownloadRequestHandler):
+    def route(self) -> tuple[Pocket, bytes | None] | None:
+        # validation
+        if not self.request.deleteRequestLayer:
+            self.send_error("This is not delete request")
+            return None
+
+        targetPath = self.get_path(self.request.deleteRequestLayer.path)
+        print(targetPath)
+        isFile = True
+        if not os.path.isfile(targetPath):
+            if not os.path.isdir(targetPath):
+                self.send_error(
+                    'The file / directory "{}" dos not exists!'.format(self.request.deleteRequestLayer.path)
+                )
+                return None
+            isFile = False
+
+        if not in_storage(self.request.deleteRequestLayer.path, self._storagePath):
+            self.send_error('The file / directory "{}" dos not exists!'.format(self.request.deleteRequestLayer.path))
+            return None
+
+        if isFile:
+            os.remove(targetPath)
+            logging.info('The file "{}" deleted!'.format(self.request.deleteRequestLayer.path))
+        else:
+            if targetPath == self.get_path("."):
+                # this is root folder
+                for name in os.listdir(targetPath):
+                    if os.path.isfile(targetPath + "/" + name):
+                        os.remove(targetPath + "/" + name)
+                    elif os.path.isdir(targetPath + "/" + name):
+                        shutil.rmtree(targetPath + "/" + name)
+
+                logging.info("The the content deleted!")
+            else:
+                shutil.rmtree(targetPath)
+                logging.info('The directoy "{}" deleted!'.format(self.request.deleteRequestLayer.path))
+
+        self.requestID = create_new_requestID()
+        res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.Delete))
+        res.deleteResponseLayer = DeleteResponseLayer(isFile)
+        return (res, b"")

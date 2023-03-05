@@ -4,21 +4,17 @@ import logging
 import socket
 import time
 
-from src.lib.config import config
-from src.lib.ftp import (
-    AKCLayer,
-    BasicLayer,
-    Pocket,
-    PocketType,
-    SegmentLayer,
-)
 from src.client.options import Options
+from src.lib.config import config
+from src.lib.ftp import AKCLayer, BasicLayer, Pocket, PocketType, SegmentLayer
+
 
 def upload_data(clientSocket: socket.socket, options: Options, resPocket: Pocket, body: bytes) -> None:
     bodySize = len(body)
 
     requestID = resPocket.basicLayer.requestID
 
+    assert resPocket.responseLayer
     singleSegmentSize = resPocket.responseLayer.singleSegmentSize
     segmentsAmount = resPocket.responseLayer.segmentsAmount
 
@@ -91,6 +87,7 @@ def download_data(clientSocket: socket.socket, options: Options, resPocket: Pock
     # init segments for downloading
     requestID = resPocket.basicLayer.requestID
 
+    assert resPocket.responseLayer
     segmentsAmount = resPocket.responseLayer.segmentsAmount
 
     neededSegments = list(range(segmentsAmount))
