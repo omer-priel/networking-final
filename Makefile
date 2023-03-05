@@ -96,6 +96,7 @@ test-client-upload-child-10000:
 
 test-client-upload-multi:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/net.jpg
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/dir
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest b/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/other/100.txt --dest a/c/100.txt

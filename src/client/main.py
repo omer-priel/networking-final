@@ -1,11 +1,13 @@
 # entry point to Application
 
+from io import BytesIO
 import logging
 import os
 import os.path
 import socket
 import sys
 import time
+import zipfile
 
 from prettytable import PrettyTable
 
@@ -66,14 +68,30 @@ def create_socket() -> None:
     print("The client socket initialized on " + options.clientAddress[0] + ":" + str(options.clientAddress[1]))
 
 
-def upload_file(filename: str, destination: str) -> None:
+def upload_file_or_directory(targetName: str, destination: str) -> None:
     # load the file info
-    if not os.path.isfile(filename):
-        print('The file"' + filename + "\" don't exists!")
-        return None
+    isFile = True
+    if not os.path.isfile(targetName):
+        if os.path.isdir(targetName):
+            isFile = False
+        else:
+            print('Not found the "' + targetName + "\"!")
+            return None
 
-    with open(filename, "rb") as f:
-        fileBody = f.read()
+    if isFile:
+        with open(targetName, "rb") as f:
+            fileBody = f.read()
+    else:
+        archive = BytesIO()
+        with zipfile.ZipFile(archive, 'w') as zip_archive:
+            for root, dirs, files in os.walk(targetName):
+                for file in files:
+                    fileInfo = zipfile.ZipInfo(os.path.relpath(os.path.join(root, file), os.path.join(targetName, '.')))
+                    with open(os.path.join(root, file), "rb") as f:
+                        zip_archive.writestr(fileInfo, f.read())
+
+        archive.seek(0)
+        fileBody = archive.read()
 
     bodySize = len(fileBody)
 
@@ -104,9 +122,12 @@ def upload_file(filename: str, destination: str) -> None:
         print("Error: " + resPocket.responseLayer.errorMessage)
         return None
 
-    # send the file
+    # send the file / directory
     if bodySize == 0:
-        print('The file "{}" upload as "{}" to the app.'.format(filename, destination))
+        if isFile:
+            print('The file "{}" upload as "{}" to the app.'.format(targetName, destination))
+        else:
+            print('The directory "{}" upload as "{}" to the app.'.format(targetName, destination))
         return None
 
     requestID = resPocket.basicLayer.requestID
@@ -159,7 +180,6 @@ def upload_file(filename: str, destination: str) -> None:
                     pocket = Pocket.from_bytes(data)
                     if pocket.basicLayer.pocketType == PocketType.Close:
                         # complit the upload
-                        print('The file "{}" upload as "{}" to the app.'.format(filename, destination))
                         timeout = True
                         uploading = False
                     elif pocket.akcLayer:
@@ -178,6 +198,13 @@ def upload_file(filename: str, destination: str) -> None:
 
             rtt = time.time() - last
             last = time.time()
+
+    # print ending
+    if isFile:
+        print('The file "{}" upload as "{}" to the app.'.format(targetName, destination))
+    else:
+        print('The directory "{}" upload as "{}" to the app.'.format(targetName, destination))
+
 
 
 def download_file(filePath: str, destination: str) -> None:
@@ -542,7 +569,7 @@ def main() -> None:
             destination = os.path.basename(filename)
 
         create_socket()
-        upload_file(filename, destination)
+        upload_file_or_directory(filename, destination)
     elif sys.argv[i] == "download":
         if len(sys.argv) == i + 1:
             print("File path and destination path are Missing!")
