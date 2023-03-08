@@ -22,6 +22,7 @@ from src.lib.ftp import (
     pack_directory_block,
     pack_file_block,
 )
+from src.lib.profiler import ProfilerScope, profiler_scope
 
 
 # interfaces
@@ -74,7 +75,12 @@ class DownloadRequestHandler(RequestHandler):
 
 # handlers
 class UploadFileRequestHandler(UploadRequestHandler):
+    profilerScope: ProfilerScope = ...  # type: ignore[assignment]
+
+    @profiler_scope()
     def route(self) -> tuple[Pocket, bytes | None] | None:
+        self.profilerScope = ProfilerScope("downloading - type Upload")
+
         # validation
         if not self.request.uploadRequestLayer:
             self.send_error("This is not upload request")
@@ -90,8 +96,12 @@ class UploadFileRequestHandler(UploadRequestHandler):
 
         self.requestID = create_new_requestID()
         res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.Upload))
+
+        self.profilerScope.scopeName = "downloading " + str(self.requestID) + " type Upload"
+
         return (res, None)
 
+    @profiler_scope()
     def post_upload(self, data: bytes) -> None:
         # create the file
         assert self.request.uploadRequestLayer
@@ -124,8 +134,11 @@ class UploadFileRequestHandler(UploadRequestHandler):
                 zip_archive.extractall(targetPath)
             logging.info('The directoy "{}" uploaded'.format(self.request.uploadRequestLayer.path))
 
+        self.profilerScope.close()
+
 
 class DownloadFileRequestHandler(DownloadRequestHandler):
+    @profiler_scope()
     def route(self) -> tuple[Pocket, bytes | None] | None:
         # validation
         if not self.request.downloadRequestLayer:
@@ -173,6 +186,7 @@ class DownloadFileRequestHandler(DownloadRequestHandler):
 
 
 class ListRequestHandler(DownloadRequestHandler):
+    @profiler_scope()
     def route(self) -> tuple[Pocket, bytes | None] | None:
         # validation
         if not self.request.listRequestLayer:
@@ -195,6 +209,7 @@ class ListRequestHandler(DownloadRequestHandler):
         res = Pocket(BasicLayer(self.requestID, PocketType.Response, PocketSubType.List))
         return (res, data)
 
+    @profiler_scope()
     def load_directory(self, directoryPath: str, parent: str, recursive: bool) -> bytes:
         directoriesAndFiles = os.listdir(directoryPath)
         directories = [directory for directory in directoriesAndFiles if os.path.isdir(directoryPath + "/" + directory)]
@@ -225,6 +240,7 @@ class ListRequestHandler(DownloadRequestHandler):
 
 
 class DeleteRequestHandler(DownloadRequestHandler):
+    @profiler_scope()
     def route(self) -> tuple[Pocket, bytes | None] | None:
         # validation
         if not self.request.deleteRequestLayer:

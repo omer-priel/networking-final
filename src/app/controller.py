@@ -24,6 +24,7 @@ from src.app.handlers import (
 from src.app.rudp import recvfrom, send_close, send_error, sendto
 from src.app.storage import StorageData, UserData
 from src.lib.ftp import AKCLayer, BasicLayer, Pocket, PocketSubType, PocketType, ResponseLayer, SegmentLayer
+from src.lib.profiler import ProfilerScope, profiler_scope
 
 # globals
 executor = ThreadPoolExecutor(2)
@@ -33,6 +34,7 @@ handlers: dict[int, RequestHandler] = {}
 handlersLock = threading.Lock()
 
 
+@profiler_scope("main loop")
 def main_loop() -> None:
     global handlers, handlersLock
 
@@ -76,6 +78,13 @@ def main_loop() -> None:
 
                         def downloading_task(handler: DownloadRequestHandler) -> None:
                             global handlers, handlersLock
+
+                            profilerScope = ProfilerScope(
+                                "downloading "
+                                + str(handler.requestID)
+                                + " type "
+                                + str(handler.request.basicLayer.pocketSubType.name)
+                            )
 
                             handler.locker.acquire()
                             assert handler.response.responseLayer
@@ -163,6 +172,8 @@ def main_loop() -> None:
                             handlers.pop(handler.get_requestID())
                             handlersLock.release()
 
+                            profilerScope.close()
+
                         executor.submit(downloading_task, handler)
                     else:
                         handler.locker.acquire()
@@ -173,6 +184,7 @@ def main_loop() -> None:
                 send_close(clientAddress)
 
 
+@profiler_scope()
 def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[RequestHandler, Pocket] | None:
     storagePath = config.APP_STORAGE_PATH + config.STORAGE_PUBLIC + "/"
 
@@ -263,6 +275,7 @@ def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[Req
     return (handler, res)
 
 
+@profiler_scope()
 def handle_upload_pocket(handler: UploadRequestHandler, pocket: Pocket) -> bool:
     if (not pocket.segmentLayer) or (not pocket.basicLayer.pocketType == PocketType.Segment):
         logging.error("Get pocket that is not upload segment")
