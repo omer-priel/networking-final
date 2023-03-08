@@ -5,7 +5,7 @@ def unpack_int_from(data: bytes, offset: int, size: int) -> tuple[int, int]:
     return (int.from_bytes(data[offset : offset + size], "big"), offset + size)
 
 
-def pack_int(number: int, size: bytes) -> bytes:
+def pack_int(number: int, size: int) -> bytes:
     return number.to_bytes(size, "big")
 
 

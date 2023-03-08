@@ -129,7 +129,7 @@ class DNSAnswerRecord:
 
 class DNSFlags:
     @staticmethod
-    def from_bytes(data: int) -> DNSFlags:
+    def from_bytes(data: bytes) -> DNSFlags:
         b1 = int(data[0])
         b2 = int(data[1])
 
@@ -227,6 +227,8 @@ class DNSPacket(DNSPacketBase):
             transactionID, DNSFlags.from_bytes(flags), queriesCount, answersCount, authorityCount, additionalCount
         )
 
+        record: DNSQueryRecord | DNSAnswerRecord
+
         while queriesCount > 0:
             record, offset = DNSQueryRecord.from_bytes(data, offset, packet)
             packet.queriesRecords += [record]
@@ -239,7 +241,7 @@ class DNSPacket(DNSPacketBase):
 
         while authorityCount > 0:
             record, offset = DNSAnswerRecord.from_bytes(data, offset, packet)
-            packet.authorityCount += [record]
+            packet.authorityRecords += [record]
             authorityCount -= 1
 
         while additionalCount > 0:
@@ -278,6 +280,8 @@ class DNSPacket(DNSPacketBase):
         data += bytes(self.flags)
 
         data += struct.pack(">HHHH", self.queriesCount, self.answersCount, self.authorityCount, self.additionalCount)
+
+        record: DNSQueryRecord | DNSAnswerRecord
 
         for record in self.queriesRecords:
             self.domainNames[record.domainName] = len(data)

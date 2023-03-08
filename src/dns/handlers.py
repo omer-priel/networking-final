@@ -107,7 +107,7 @@ def request_handler(
     clientsSocket.sendto(bytes(response), clientAddress)
 
 
-def save_cache_into_database(database: Database, response: DNSPacket):
+def save_cache_into_database(database: Database, response: DNSPacket) -> None:
     now = int(time.time())
     for recod in response.additionalRecords + response.authorityRecords + response.answersRecords:
         if recod.type == 1:  # A
