@@ -3,10 +3,12 @@
 import socket
 import logging
 import random
+import time
 
 from src.dns.config import config
-from src.dns.database import Database, RecordData
-from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord, str_to_ip, pack_int, unpack_int_from
+from src.dns.database import Database, RecordData, save_database, CacheRecord
+from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord, str_to_ip, pack_int, unpack_int_from, unpack_host_name, ip_to_str
+
 
 def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, database: Database, query: DNSPacket, clientAddress: tuple[str, int]) -> None:
     logging.info("Recived query from client")
@@ -51,8 +53,11 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
         except socket.error:
             pass
 
-    # create the response
+    # save the cache
+    if response:
+        save_cache_into_database(database, response)
 
+    # create the response
     if not response:
         response = DNSPacket(query.transactionID, query.flags, query.queriesCount, 0, 0, 0)
 
@@ -64,10 +69,11 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
     response.flags.checkdisable = False
 
     response.queriesCount = query.queriesCount
+    response.queriesRecords = query.queriesRecords
 
     for recordData in locals:
         if recordData:
-            response.answersRecords += [DNSAnswerRecord(recordData.domain_name, 1, 1, recordData.ttl, str_to_ip(recordData.ip_address))]
+            response.answersRecords += [DNSAnswerRecord(response, recordData.domain_name, 1, 1, recordData.ttl, str_to_ip(recordData.ip_address))]
 
     response.answersCount = len(response.answersRecords)
 
@@ -77,3 +83,12 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
     logging.debug(response)
 
     clientsSocket.sendto(bytes(response), clientAddress)
+
+
+def save_cache_into_database(database: Database, response: DNSPacket):
+    now = int(time.time())
+    for recod in response.additionalRecords + response.authorityRecords + response.answersRecords:
+        if recod.type == 1:  # A
+            database.cache_records[recod.domainName] = CacheRecord(ip_address=ip_to_str(recod.rData), expired_time=now + recod.ttl)
+
+    save_database(database)

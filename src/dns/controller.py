@@ -16,7 +16,7 @@ def create_socket() -> tuple[socket.socket, socket.socket]:
     clientsSocket.settimeout(config.SOCKET_TIMEOUT)
     clientsSocket.bind(("0.0.0.0", config.SERVER_PORT))
 
-    logging.info("The dhcp socket initialized on port {}".format(config.SERVER_PORT))
+    logging.info("The dns socket initialized on port {}".format(config.SERVER_PORT))
 
     parentSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     parentSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

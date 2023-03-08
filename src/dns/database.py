@@ -8,7 +8,7 @@ import time
 import jsbeautifier  # type: ignore
 from pydantic import BaseModel
 
-from src.dhcp.config import config
+from src.dns.config import config
 
 
 class Record(BaseModel):
@@ -46,7 +46,7 @@ class Database(BaseModel):
             record = self.cache_records[domainName]
             now = int(time.time())
 
-            if record.expired_time > now:
+            if record.expired_time < now:
                 self.cache_records.pop(domainName)
                 save_database(self)
                 return None

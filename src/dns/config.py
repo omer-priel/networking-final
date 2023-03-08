@@ -1,4 +1,4 @@
-# config of the DHCP server
+# config of the DNS server
 
 import os
 import logging
