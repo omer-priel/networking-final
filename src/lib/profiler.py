@@ -13,12 +13,12 @@ from io import TextIOWrapper
 PROFILE_PATH = "profiles/profile.json"
 
 # globals
-isFirstEvent = True
-
+isFirstEvent: bool = True
+staretdTs: int = 0
 profileStream: TextIOWrapper = ...  # type: ignore[assignment]
 
 def use_profiler(entryPoint: Callable[[], None]):
-    global profileStream
+    global profileStream, staretdTs
 
     # remove the last profile.json and create the parent directory if needed
     if os.path.isfile(PROFILE_PATH):
@@ -32,6 +32,7 @@ def use_profiler(entryPoint: Callable[[], None]):
 
     # call the program
     try:
+        staretdTs = calendar.timegm(time.gmtime())
         entryPoint()
     except BaseException:
         traceback.print_exc()
@@ -49,12 +50,15 @@ def profiler_add_event(name: str):
         profileStream.write(',')
 
     name = name.replace('"', "'")
-    ts = calendar.timegm(time.gmtime())
+    ts = calendar.timegm(time.gmtime()) - staretdTs
     tid = threading.current_thread().native_id
-    profileStream.write('{"name": {}, "cat": "Event", "ph": "X", "dur": 100, "ts": {}, "pid": 0, "tid": {} }'.format(name, ts, tid))
+    profileStream.write('{' + '"name": "{}", "cat": "Event", "ph": "X", "dur": 100, "ts": {}, "pid": 0, "tid": {} '.format(name, ts, tid) + '}')
 
 def profiler_add_scope(name: str, startTs: int, endTs: int):
     global isFirstEvent
+
+    startTs -= staretdTs
+    endTs -= staretdTs
 
     if (isFirstEvent):
         isFirstEvent = False
@@ -63,20 +67,40 @@ def profiler_add_scope(name: str, startTs: int, endTs: int):
 
     name = name.replace('"', "'")
     tid = threading.current_thread().native_id
-    profileStream.write('{"name": {}, "cat": "Scope", "ph": "X", "dur": {}, "ts": {}, "pid": 0, "tid": {} }'.format(name, endTs - startTs, startTs, tid))
+    profileStream.write('{' + '\"name": "{}", "cat": "Scope", "ph": "X", "dur": {}, "ts": {}, "pid": 0, "tid": {} '.format(name, endTs - startTs, startTs, tid) + '}')
 
-def profiler_scope(function: Callable, scopeName: str | None = None):
-    def wrapper(*args,**kwargs):
 
-        startTs = calendar.timegm(time.gmtime())
-        ret = function(*args,**kwargs)
+class ProfilerScope:
+    def __init__(self, scopeName: str):
+        self.scopeName = scopeName
+        self.startTs = calendar.timegm(time.gmtime())
+
+    def close(self):
         endTs = calendar.timegm(time.gmtime())
+        profiler_add_scope(self.scopeName, self.startTs, endTs)
 
-        if not scopeName:
-            scopeName = function.__name__
 
-        profiler_add_scope(scopeName, startTs, endTs)
+def profiler_scope(scopeName: str | None = None):
+    def decorator(function: Callable):
+        def wrapper(*args, **kwargs):
+            startTs = calendar.timegm(time.gmtime())
 
-        return ret
+            error : BaseException | None = None
+            try:
+                ret = function(*args, **kwargs)
+            except BaseException as ex:
+                error = ex
 
-    return wrapper
+            endTs = calendar.timegm(time.gmtime())
+
+            if scopeName:
+                profiler_add_scope(scopeName, startTs, endTs)
+            else:
+                profiler_add_scope(function.__name__, startTs, endTs)
+
+            if error:
+                raise error
+
+            return ret
+        return wrapper
+    return decorator

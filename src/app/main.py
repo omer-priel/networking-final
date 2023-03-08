@@ -3,13 +3,14 @@
 import sys
 import logging
 
-from src.lib.profiler import use_profiler
+from src.lib.profiler import use_profiler, profiler_scope
 from src.app.config import init_config, init_logging
 from src.app.controller import main_loop
 from src.app.rudp import create_socket
 from src.app.storage import init_strorage
 
 
+@profiler_scope("init")
 def init_app() -> None:
     init_config()
     init_logging()
@@ -20,6 +21,7 @@ def init_app() -> None:
 
 # entry point
 def main() -> None:
+
     init_app()
     create_socket()
 

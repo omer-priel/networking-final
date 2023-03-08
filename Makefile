@@ -81,6 +81,11 @@ test-client-upload-100:
 test-client-upload-1000:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/1K.txt
 
+test-client-upload-1000-multi:
+	for i in {1..10..1}; do \
+		PYTHONPATH=. poetry run python src/client/main.py upload uploads/1K.txt ;\
+	done;
+
 test-client-upload-10000:
 	PYTHONPATH=. poetry run python src/client/main.py upload uploads/10K.txt
 
