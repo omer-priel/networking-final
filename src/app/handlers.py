@@ -232,7 +232,6 @@ class DeleteRequestHandler(DownloadRequestHandler):
             return None
 
         targetPath = self.get_path(self.request.deleteRequestLayer.path)
-        print(targetPath)
         isFile = True
         if not os.path.isfile(targetPath):
             if not os.path.isdir(targetPath):

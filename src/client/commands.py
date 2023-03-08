@@ -75,7 +75,15 @@ def upload_command(networkConnection: NetworkConnection, options: Options, targe
     networkConnection.sendto(bytes(reqPocket), options.appAddress)
 
     # recive response
-    data = networkConnection.recvfrom()[0]
+    try:
+        data = networkConnection.recvfrom()[0]
+    except OSError:
+        if isFile:
+            print("Error: faild to upload the file")
+        else:
+            print("Error: faild to upload the directory")
+        return None
+
     resPocket = Pocket.from_bytes(data)
 
     # handle response

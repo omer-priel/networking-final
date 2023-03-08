@@ -36,8 +36,11 @@ class UDPConnection(NetworkConnection):
 
 class TCPConnection(NetworkConnection):
     recvSocket: socket.socket = ...
+    hostAddress: tuple[str, int] = ...
 
     def init(self, hostAddress: tuple[str, int]) -> None:
+        self.hostAddress = hostAddress
+
         self.recvSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
         self.recvSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -56,16 +59,20 @@ class TCPConnection(NetworkConnection):
 
         try:
             sendSocket.connect(address)
+            data = self.hostAddress[1].to_bytes(2, byteorder="big") + data
             sendSocket.sendall(data)
+        except:
+            pass
         finally:
             sendSocket.close()
+
 
     def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
         error: OSError | None = None
         conn: socket.socket | None = None
         try:
-            conn, address = self.recvSocket.accept()
-            data = conn.recv(config.SOCKET_MAXSIZE)
+            conn, originAddress = self.recvSocket.accept()
+            data = conn.recv(config.SOCKET_MAXSIZE + 2)
         except socket.error as ex:
             error = ex
         finally:
@@ -74,6 +81,10 @@ class TCPConnection(NetworkConnection):
 
         if error:
             raise error
+
+        port = int.from_bytes(data[0:2], byteorder="big")
+        data = data[2:]
+        address = (originAddress[0], port)
 
         return (data, address)
 
