@@ -1,23 +1,27 @@
 # network interface from app and client
 
-from abc import ABC, abstractmethod
 import socket
+from abc import ABC, abstractmethod
 
 from src.lib.config import config
 
+
 class NetworkConnection(ABC):
     @abstractmethod
-    def init(self, hostAddress: tuple[str, int]) -> None: ...
+    def init(self, hostAddress: tuple[str, int]) -> None:
+        ...
 
     @abstractmethod
-    def sendto(self, data: bytes, clientAddress: tuple[str, int]) -> None: ...
+    def sendto(self, data: bytes, clientAddress: tuple[str, int]) -> None:
+        ...
 
     @abstractmethod
-    def recvfrom(self) -> tuple[bytes, tuple[str, int]]: ...
+    def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
+        ...
 
 
 class UDPConnection(NetworkConnection):
-    interfceSocket: socket.socket
+    interfceSocket: socket.socket = ...  # type: ignore[assignment]
 
     def init(self, hostAddress: tuple[str, int]) -> None:
         self.interfceSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -28,15 +32,15 @@ class UDPConnection(NetworkConnection):
         self.interfceSocket.settimeout(config.SOCKET_TIMEOUT)
 
     def sendto(self, data: bytes, address: tuple[str, int]) -> None:
-        return self.interfceSocket.sendto(data, address)
+        self.interfceSocket.sendto(data, address)
 
     def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
         return self.interfceSocket.recvfrom(config.SOCKET_MAXSIZE)
 
 
 class TCPConnection(NetworkConnection):
-    recvSocket: socket.socket = ...
-    hostAddress: tuple[str, int] = ...
+    recvSocket: socket.socket = ...  # type: ignore[assignment]
+    hostAddress: tuple[str, int] = ...  # type: ignore[assignment]
 
     def init(self, hostAddress: tuple[str, int]) -> None:
         self.hostAddress = hostAddress
@@ -61,11 +65,10 @@ class TCPConnection(NetworkConnection):
             sendSocket.connect(address)
             data = self.hostAddress[1].to_bytes(2, byteorder="big") + data
             sendSocket.sendall(data)
-        except:
+        except socket.error:
             pass
         finally:
             sendSocket.close()
-
 
     def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
         error: OSError | None = None

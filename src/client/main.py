@@ -8,7 +8,7 @@ import sys
 from src.client.commands import delete_command, download_command, list_command, upload_command
 from src.client.options import Options
 from src.lib.config import config, init_logging
-from src.lib.network import create_network_connection, NetworkConnection
+from src.lib.network import create_network_connection
 
 
 def init_app() -> None:

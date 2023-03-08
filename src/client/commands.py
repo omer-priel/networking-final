@@ -13,8 +13,6 @@ from prettytable import PrettyTable
 
 from src.client.options import Options
 from src.client.rudp import download_data, upload_data
-from src.lib.config import config
-from src.lib.network import NetworkConnection
 from src.lib.ftp import (
     BasicLayer,
     DeleteRequestLayer,
@@ -29,6 +27,7 @@ from src.lib.ftp import (
     unpack_directory_block,
     unpack_file_block,
 )
+from src.lib.network import NetworkConnection
 
 # config
 MAX_SEGMENT_SIZE = 1000  # [byte]
