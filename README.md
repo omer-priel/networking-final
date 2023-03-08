@@ -24,7 +24,7 @@ Options:
 
 The DHCP server are simple DHCP that based on only python and json file for saving the data.
 
-The DNS ...
+The DNS is a local DNS server that has static domains and caching recodes that saved in a json file.
 
 ## Folders Structure
 
@@ -334,13 +334,54 @@ dhcp.json fields:
 
 ## DNS Server
 
-TODO
+### Environment Variables
+
+The Environment Variables will be declaerd in src/dns/.env
+
+| Name          | Description                          |
+| ------------- | ------------------------------------ |
+| SERVER_PORT   | DNS port - 53                        |
+| PARENT_PORT   | Port of the coonection to the parent |
+| DATABASE_PATH | Relative path of the dns.json        |
+
+### Get Started
+
+Run for open command in the terminal for opening the DHCP server:
+
+```bash
+make start-dns
+```
+
+### Testing
+
+At first, check that the server is running. after that run the folow commands in the terminal:
+
+```bash
+make test-dns-all
+```
+
+### Docs for development
+
+Config: \
+Recive from port 53
+
+dhcp.json fields:
+
+* parent_dns - IP Address of parent DNS server of this server
+* static_ttl - The Time To Live in seconds for the domains of this server
+* static_records - Static Records of this server, the key is the domain of the record
+  * ip_address - IP Address of the domain
+* cache_records - Cashed A Records, the key is the domain of the record
+  * ip_address - IP Address of the domain
+  * expired_time - When the record is expired in seconds
 
 ## Links
 
 * Python Struct: <https://docs.python.org/3.7/library/struct.html>
 * DHCP Wikipedia: <https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol>
 * DHCP defied and who it works: <https://www.networkworld.com/article/3299438/dhcp-defined-and-how-it-works.html>
+* DNS Wikipedia: <https://en.wikipedia.org/wiki/Domain_Name_System>
+* DNS RFC 1035: <https://www.ietf.org/rfc/rfc1035.txt>
 
 ## Author
 
