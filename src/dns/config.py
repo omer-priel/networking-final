@@ -1,6 +1,7 @@
 # config of the DHCP server
 
 import os
+import logging
 
 from dotenv import load_dotenv
 

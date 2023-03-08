@@ -13,7 +13,7 @@ class Config:
     SOCKET_MAXSIZE: int = 64000
     CWND_START_VALUE: int = 1500
 
-    LOGGING_LEVEL: int = logging.DEBUG
+    LOGGING_LEVEL: int = logging.INFO
 
 
 config = Config()

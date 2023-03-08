@@ -2,15 +2,16 @@
 
 import socket
 import logging
+import random
 
 from src.dns.config import config
 from src.dns.database import Database, RecordData
-from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord, str_to_ip
+from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord, str_to_ip, pack_int, unpack_int_from
 
 def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, database: Database, query: DNSPacket, clientAddress: tuple[str, int]) -> None:
     logging.info("Recived query from client")
 
-    print(query)
+    logging.debug(query)
 
     locals: list[RecordData | None] = [None] * query.queriesCount
 
@@ -33,7 +34,8 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
 
     # find if need from the parent DNS
     if missing > 0:
-        nextQuery = DNSPacket(query.transactionID, query.flags, len(queriesRecords), 0, 0, 0)
+        transactionIDAsNum = unpack_int_from(query.transactionID, 0, 2)[0]
+        nextQuery = DNSPacket(pack_int(random.randint(1, transactionIDAsNum - 1), 2), query.flags, len(queriesRecords), 0, 0, 0)
         nextQuery.queriesRecords = queriesRecords
 
         logging.info("Send query to parent DNS")
@@ -45,7 +47,7 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
             response = DNSPacket.from_bytes(data)
 
             logging.info("Recived response from parent DNS")
-            print(response)
+            logging.debug(response)
         except socket.error:
             pass
 
@@ -54,6 +56,7 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
     if not response:
         response = DNSPacket(query.transactionID, query.flags, query.queriesCount, 0, 0, 0)
 
+    response.transactionID = query.transactionID
     response.flags.isResponse = True
     response.flags.authoritative = False
     response.flags.recavail = True
@@ -71,7 +74,6 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
     # send the response
 
     logging.info("Send response to client")
-
-    print(clientAddress)
+    logging.debug(response)
 
     clientsSocket.sendto(bytes(response), clientAddress)
