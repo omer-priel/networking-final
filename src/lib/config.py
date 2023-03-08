@@ -10,7 +10,7 @@ class Config:
     FILE_PATH_MAX_LENGTH: int = 256
 
     SOCKET_TIMEOUT: float = 0.1
-    SOCKET_MAXSIZE: int = 4096
+    SOCKET_MAXSIZE: int = 64000
     CWND_START_VALUE: int = 1500
 
     LOGGING_LEVEL: int = logging.DEBUG

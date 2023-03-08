@@ -20,16 +20,18 @@ class CacheRecord(Record):
 
 
 class RecordData:
+    domain_name: str
     ip_address: str
     ttl: int
 
-    def __init__(self, ip_address: str, ttl: int) -> None:
+    def __init__(self, domain_name: str, ip_address: str, ttl: int) -> None:
+        self.domain_name = domain_name
         self.ip_address = ip_address
         self.ttl = ttl
 
 
 class Database(BaseModel):
-    dns_parent: str = "8.8.8.8"
+    parent_dns: str = "8.8.8.8"
 
     static_ttl: int = 360  # [s]
     static_records: dict[str,Record] = {}  # domain name : Record
@@ -38,7 +40,7 @@ class Database(BaseModel):
 
     def get_active_record(self, domainName: str) -> RecordData | None:
         if domainName in self.static_records:
-            return RecordData(self.static_records[domainName].ip_address, self.static_ttl)
+            return RecordData(domainName, self.static_records[domainName].ip_address, self.static_ttl)
 
         if domainName in self.cache_records:
             record = self.cache_records[domainName]
@@ -49,7 +51,7 @@ class Database(BaseModel):
                 save_database(self)
                 return None
 
-            return RecordData(record.ip_address, record.expired_time - now)
+            return RecordData(domainName, record.ip_address, record.expired_time - now)
 
         return None
 

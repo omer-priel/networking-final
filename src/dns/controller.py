@@ -8,8 +8,8 @@ from src.dns.database import Database
 from src.dns.packets import DNSPacket
 from src.dns.handlers import request_handler
 
-# network
-def create_socket() -> socket.socket:
+
+def create_socket() -> tuple[socket.socket, socket.socket]:
     dnsSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     dnsSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     dnsSocket.setblocking(True)
@@ -17,7 +17,14 @@ def create_socket() -> socket.socket:
     dnsSocket.bind(("0.0.0.0", config.SERVER_PORT))
 
     logging.info("The dhcp socket initialized on port {}".format(config.SERVER_PORT))
-    return dnsSocket
+
+    parentSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    parentSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    parentSocket.setblocking(True)
+    parentSocket.settimeout(config.SOCKET_TIMEOUT)
+    parentSocket.bind(("0.0.0.0", config.PARENT_PORT))
+
+    return (dnsSocket, parentSocket)
 
 
 def recvfrom(dhcpSocket: socket.socket) -> tuple[DNSPacket, tuple[str, int]] | None:
@@ -30,7 +37,7 @@ def recvfrom(dhcpSocket: socket.socket) -> tuple[DNSPacket, tuple[str, int]] | N
 
 
 def main_loop(database: Database) -> None:
-    dnsSocket = create_socket()
+    dnsSocket, parentSocket = create_socket()
 
     while True:
         res = recvfrom(dnsSocket)
@@ -43,4 +50,4 @@ def main_loop(database: Database) -> None:
         if packet.flags.isResponse:
             continue
 
-        request_handler(dnsSocket, database, packet, clientAddress)
+        request_handler(dnsSocket, parentSocket, database, packet, clientAddress)
