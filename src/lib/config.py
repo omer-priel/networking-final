@@ -15,6 +15,8 @@ class Config:
 
     LOGGING_LEVEL: int = logging.DEBUG
 
+    TCP_MODE: bool = False
+
 
 config = Config()
 

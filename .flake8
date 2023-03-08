@@ -2,7 +2,6 @@
 exclude =
     .git,
     __pycache__,
-    .venv,
     docs,
     res,
     uploads,

@@ -1,0 +1,10 @@
+name: networking_fianl
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - make
+  - pip
+  - pip:
+    - poetry==1.3.*

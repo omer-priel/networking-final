@@ -31,7 +31,6 @@ exclude = '''
 (
   /(
       \.git
-    | \.venv
     | docs
     | res
     | uploads

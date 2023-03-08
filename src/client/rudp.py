@@ -7,9 +7,10 @@ import time
 from src.client.options import Options
 from src.lib.config import config
 from src.lib.ftp import AKCLayer, BasicLayer, Pocket, PocketType, SegmentLayer
+from src.lib.network import NetworkConnection
 
 
-def upload_data(clientSocket: socket.socket, options: Options, resPocket: Pocket, body: bytes) -> None:
+def upload_data(networkConnection: NetworkConnection, options: Options, resPocket: Pocket, body: bytes) -> None:
     bodySize = len(body)
 
     requestID = resPocket.basicLayer.requestID
@@ -45,7 +46,7 @@ def upload_data(clientSocket: socket.socket, options: Options, resPocket: Pocket
 
             windowSending.append(segmentID)
 
-            clientSocket.sendto(bytes(segmentPocket), options.appAddress)
+            networkConnection.sendto(bytes(segmentPocket), options.appAddress)
         else:
             # refresh window
             logging.debug(
@@ -54,7 +55,7 @@ def upload_data(clientSocket: socket.socket, options: Options, resPocket: Pocket
             timeout = False
             while not timeout:
                 try:
-                    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+                    data = networkConnection.recvfrom()[0]
                 except TimeoutError:
                     now = time.time()
                     timeout = last + rtt < now
@@ -83,7 +84,7 @@ def upload_data(clientSocket: socket.socket, options: Options, resPocket: Pocket
             last = time.time()
 
 
-def download_data(clientSocket: socket.socket, options: Options, resPocket: Pocket) -> bytes:
+def download_data(networkConnection: NetworkConnection, options: Options, resPocket: Pocket) -> bytes:
     # init segments for downloading
     requestID = resPocket.basicLayer.requestID
 
@@ -103,10 +104,10 @@ def download_data(clientSocket: socket.socket, options: Options, resPocket: Pock
     itFirstSegment = False
 
     while not itFirstSegment:
-        clientSocket.sendto(bytes(readyPocket), options.appAddress)
+        networkConnection.sendto(bytes(readyPocket), options.appAddress)
 
         try:
-            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+            data = networkConnection.recvfrom()[0]
             segmentPocket = Pocket.from_bytes(data)
             itFirstSegment = segmentPocket.basicLayer.pocketType == PocketType.Segment
         except socket.error:
@@ -118,7 +119,7 @@ def download_data(clientSocket: socket.socket, options: Options, resPocket: Pock
             if itFirstSegment:
                 itFirstSegment = False
             else:
-                data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+                data = networkConnection.recvfrom()[0]
                 segmentPocket = Pocket.from_bytes(data)
 
             if (not segmentPocket.segmentLayer) or (not segmentPocket.basicLayer.pocketType == PocketType.Segment):
@@ -132,7 +133,7 @@ def download_data(clientSocket: socket.socket, options: Options, resPocket: Pock
 
                 akcPocket = Pocket(BasicLayer(requestID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
-                clientSocket.sendto(bytes(akcPocket), options.appAddress)
+                networkConnection.sendto(bytes(akcPocket), options.appAddress)
         except socket.error:
             pass
 
@@ -143,10 +144,10 @@ def download_data(clientSocket: socket.socket, options: Options, resPocket: Pock
     closed = False
 
     while not closed:
-        clientSocket.sendto(bytes(complitedPocket), options.appAddress)
+        networkConnection.sendto(bytes(complitedPocket), options.appAddress)
 
         try:
-            data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+            data = networkConnection.recvfrom()[0]
             closePocket = Pocket.from_bytes(data)
             closed = closePocket.basicLayer.pocketType == PocketType.Close
         except socket.error:

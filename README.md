@@ -49,6 +49,7 @@ The DNS ...
 Support linux OS only.
 
 * python 3.10.x
+* conda
 * poetry
 
 ## Installation
@@ -56,7 +57,11 @@ Support linux OS only.
 Run the folow command in the terminal:
 
 ```bash
-make install
+conda env create -f environment.yml
+conda activate networking_fianl
+poetry --version
+poetry config virtualenvs.in-project false
+poetry install
 ```
 
 ## App - Client
@@ -96,7 +101,7 @@ At first, check that the server is running. after that run the folow commands in
 
 ```bash
 make test-client-help
-make test-client-all
+make test-client-upload-all
 make test-client-upload-10000
 make test-client-upload-child-10000
 make test-client-upload-range

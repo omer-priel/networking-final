@@ -4,7 +4,6 @@ import logging
 import os
 import os.path
 import shutil
-import socket
 import struct
 import time
 import zipfile
@@ -15,6 +14,7 @@ from prettytable import PrettyTable
 from src.client.options import Options
 from src.client.rudp import download_data, upload_data
 from src.lib.config import config
+from src.lib.network import NetworkConnection
 from src.lib.ftp import (
     BasicLayer,
     DeleteRequestLayer,
@@ -34,7 +34,7 @@ from src.lib.ftp import (
 MAX_SEGMENT_SIZE = 1000  # [byte]
 
 
-def upload_command(clientSocket: socket.socket, options: Options, targetName: str, destination: str) -> None:
+def upload_command(networkConnection: NetworkConnection, options: Options, targetName: str, destination: str) -> None:
     # load the file info
     isFile = True
     if not os.path.isfile(targetName):
@@ -72,10 +72,10 @@ def upload_command(clientSocket: socket.socket, options: Options, targetName: st
     # send request
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(bytes(reqPocket), options.appAddress)
+    networkConnection.sendto(bytes(reqPocket), options.appAddress)
 
     # recive response
-    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    data = networkConnection.recvfrom()[0]
     resPocket = Pocket.from_bytes(data)
 
     # handle response
@@ -93,7 +93,7 @@ def upload_command(clientSocket: socket.socket, options: Options, targetName: st
         return None
 
     # send the file / directory
-    upload_data(clientSocket, options, resPocket, body)
+    upload_data(networkConnection, options, resPocket, body)
 
     # print ending
     if isFile:
@@ -102,7 +102,7 @@ def upload_command(clientSocket: socket.socket, options: Options, targetName: st
         print('The directory "{}" upload as "{}" to the app.'.format(targetName, destination))
 
 
-def download_command(clientSocket: socket.socket, options: Options, targetName: str, destination: str) -> None:
+def download_command(networkConnection: NetworkConnection, options: Options, targetName: str, destination: str) -> None:
     # check if the directory of destination exists
     if os.path.isfile(destination):
         os.remove(destination)
@@ -119,10 +119,10 @@ def download_command(clientSocket: socket.socket, options: Options, targetName: 
 
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(bytes(reqPocket), options.appAddress)
+    networkConnection.sendto(bytes(reqPocket), options.appAddress)
 
     # recive download response
-    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    data = networkConnection.recvfrom()[0]
     resPocket = Pocket.from_bytes(data)
 
     # handel response
@@ -136,7 +136,7 @@ def download_command(clientSocket: socket.socket, options: Options, targetName: 
         print("Error: " + resPocket.responseLayer.errorMessage)
         return None
 
-    data = download_data(clientSocket, options, resPocket)
+    data = download_data(networkConnection, options, resPocket)
 
     isFile = struct.unpack_from("?", data)[0]
     data = data[struct.calcsize("?") :]
@@ -156,7 +156,7 @@ def download_command(clientSocket: socket.socket, options: Options, targetName: 
         logging.info('The directory "{}" downloaded to "{}".'.format(targetName, destination))
 
 
-def delete_command(clientSocket: socket.socket, options: Options, targetName: str) -> None:
+def delete_command(networkConnection: NetworkConnection, options: Options, targetName: str) -> None:
     # send the delete request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.Delete))
     reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
@@ -164,10 +164,10 @@ def delete_command(clientSocket: socket.socket, options: Options, targetName: st
 
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(bytes(reqPocket), options.appAddress)
+    networkConnection.sendto(bytes(reqPocket), options.appAddress)
 
     # recive delete response
-    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    data = networkConnection.recvfrom()[0]
     resPocket = Pocket.from_bytes(data)
 
     # handel response
@@ -187,7 +187,7 @@ def delete_command(clientSocket: socket.socket, options: Options, targetName: st
         print('The directory "{}" deleted.'.format(targetName))
 
 
-def list_command(clientSocket: socket.socket, options: Options, directoryPath: str, recursive: bool) -> None:
+def list_command(networkConnection: NetworkConnection, options: Options, directoryPath: str, recursive: bool) -> None:
     # send list request
     reqPocket = Pocket(BasicLayer(0, PocketType.Request, PocketSubType.List))
     reqPocket.requestLayer = RequestLayer(0, MAX_SEGMENT_SIZE, options.anonymous, options.userName, options.password)
@@ -195,10 +195,10 @@ def list_command(clientSocket: socket.socket, options: Options, directoryPath: s
 
     logging.debug("send req pocket: " + str(reqPocket))
 
-    clientSocket.sendto(bytes(reqPocket), options.appAddress)
+    networkConnection.sendto(bytes(reqPocket), options.appAddress)
 
     # recive list response
-    data = clientSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+    data = networkConnection.recvfrom()[0]
     resPocket = Pocket.from_bytes(data)
 
     # handle response
@@ -216,7 +216,7 @@ def list_command(clientSocket: socket.socket, options: Options, directoryPath: s
         print_directory_content(b"")
         return None
 
-    data = download_data(clientSocket, options, resPocket)
+    data = download_data(networkConnection, options, resPocket)
 
     # print the directory content
     print_directory_content(data)

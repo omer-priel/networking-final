@@ -16,7 +16,6 @@ clean:
 	sudo rm -rf temp storage
 
 clean-all: clean
-	rm -rf .venv poetry.lock
 
 black:
 	 poetry run black ./src/
@@ -61,7 +60,7 @@ start-app:
 	PYTHONPATH=. poetry run python src/app/main.py
 
 start-dhcp:
-	sudo ./.venv/bin/python3 src/dhcp/main.py
+	sudo python3 src/dhcp/main.py
 
 start-dns:
 	PYTHONPATH=. poetry run python src/dns/main.py
