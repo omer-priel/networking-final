@@ -332,3 +332,14 @@ test-dns-ask-facebook:
 
 test-dns-ask-app:
 	nslookup app.final.project.local localhost
+
+test-dns-all:
+	nslookup google.com localhost
+	nslookup google.com localhost
+	nslookup google.com localhost
+	nslookup www.youtube.com localhost
+	nslookup www.youtube.com localhost
+	nslookup en.wikipedia.org localhost
+	nslookup www.facebook.com localhost
+	nslookup app.final.project.local localhost
+	nslookup app.final.project.local localhost

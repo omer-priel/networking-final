@@ -7,7 +7,8 @@ import time
 
 from src.dns.config import config
 from src.dns.database import Database, RecordData, save_database, CacheRecord
-from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord, ip_str_to_bytes, pack_int, unpack_int_from, ip_bytes_to_str
+from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord
+from src.dns.converters import ip_str_to_bytes, pack_int, unpack_int_from, ip_bytes_to_str
 
 
 def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, database: Database, query: DNSPacket, clientAddress: tuple[str, int]) -> None:
