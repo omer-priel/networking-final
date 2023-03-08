@@ -1,13 +1,13 @@
 # Profiler for chrome://tracing
 
-from typing import Callable
 import calendar
-import time
-import threading
-import traceback
 import os
 import os.path
+import threading
+import time
+import traceback
 from io import TextIOWrapper
+from typing import Callable
 
 # config
 PROFILE_PATH = "profiles/profile.json"
@@ -17,7 +17,8 @@ isFirstEvent: bool = True
 staretdTs: int = 0
 profileStream: TextIOWrapper = ...  # type: ignore[assignment]
 
-def use_profiler(entryPoint: Callable[[], None]):
+
+def use_profiler(entryPoint: Callable[[], None]) -> None:
     global profileStream, staretdTs
 
     # remove the last profile.json and create the parent directory if needed
@@ -38,54 +39,66 @@ def use_profiler(entryPoint: Callable[[], None]):
         traceback.print_exc()
     finally:
         # close the profile file
-        profileStream.write(']}')
+        profileStream.write("]}")
         profileStream.close()
 
-def profiler_add_event(name: str):
+
+def profiler_add_event(name: str) -> None:
     global isFirstEvent
 
-    if (isFirstEvent):
+    if isFirstEvent:
         isFirstEvent = False
     else:
-        profileStream.write(',')
+        profileStream.write(",")
 
     name = name.replace('"', "'")
     ts = calendar.timegm(time.gmtime()) - staretdTs
     tid = threading.current_thread().native_id
-    profileStream.write('{' + '"name": "{}", "cat": "Event", "ph": "X", "dur": 100, "ts": {}, "pid": 0, "tid": {} '.format(name, ts, tid) + '}')
+    profileStream.write(
+        "{"
+        + '"name": "{}", "cat": "Event", "ph": "X", "dur": 100, "ts": {}, "pid": 0, "tid": {} '.format(name, ts, tid)
+        + "}"
+    )
 
-def profiler_add_scope(name: str, startTs: int, endTs: int):
+
+def profiler_add_scope(name: str, startTs: int, endTs: int) -> None:
     global isFirstEvent
 
     startTs -= staretdTs
     endTs -= staretdTs
 
-    if (isFirstEvent):
+    if isFirstEvent:
         isFirstEvent = False
     else:
-        profileStream.write(',')
+        profileStream.write(",")
 
     name = name.replace('"', "'")
     tid = threading.current_thread().native_id
-    profileStream.write('{' + '\"name": "{}", "cat": "Scope", "ph": "X", "dur": {}, "ts": {}, "pid": 0, "tid": {} '.format(name, endTs - startTs, startTs, tid) + '}')
+    profileStream.write(
+        "{"
+        + '"name": "{}", "cat": "Scope", "ph": "X", "dur": {}, "ts": {}, "pid": 0, "tid": {} '.format(
+            name, endTs - startTs, startTs, tid
+        )
+        + "}"
+    )
 
 
 class ProfilerScope:
-    def __init__(self, scopeName: str):
+    def __init__(self, scopeName: str) -> None:
         self.scopeName = scopeName
         self.startTs = calendar.timegm(time.gmtime())
 
-    def close(self):
+    def close(self) -> None:
         endTs = calendar.timegm(time.gmtime())
         profiler_add_scope(self.scopeName, self.startTs, endTs)
 
 
-def profiler_scope(scopeName: str | None = None):
-    def decorator(function: Callable):
-        def wrapper(*args, **kwargs):
+def profiler_scope(scopeName: str | None = None):  # type: ignore [no-untyped-def]
+    def decorator(function: Callable):  # type: ignore [no-untyped-def]
+        def wrapper(*args, **kwargs):  # type: ignore [no-untyped-def]
             startTs = calendar.timegm(time.gmtime())
 
-            error : BaseException | None = None
+            error: BaseException | None = None
             try:
                 ret = function(*args, **kwargs)
             except BaseException as ex:
@@ -102,5 +115,7 @@ def profiler_scope(scopeName: str | None = None):
                 raise error
 
             return ret
+
         return wrapper
+
     return decorator

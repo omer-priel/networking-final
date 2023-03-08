@@ -24,7 +24,7 @@ from src.app.handlers import (
 from src.app.rudp import recvfrom, send_close, send_error, sendto
 from src.app.storage import StorageData, UserData
 from src.lib.ftp import AKCLayer, BasicLayer, Pocket, PocketSubType, PocketType, ResponseLayer, SegmentLayer
-from src.lib.profiler import profiler_scope, ProfilerScope
+from src.lib.profiler import ProfilerScope, profiler_scope
 
 # globals
 executor = ThreadPoolExecutor(2)
@@ -79,7 +79,12 @@ def main_loop() -> None:
                         def downloading_task(handler: DownloadRequestHandler) -> None:
                             global handlers, handlersLock
 
-                            profilerScope = ProfilerScope("downloading " + str(handler.requestID) + " type " + str(handler.request.basicLayer.pocketSubType.name))
+                            profilerScope = ProfilerScope(
+                                "downloading "
+                                + str(handler.requestID)
+                                + " type "
+                                + str(handler.request.basicLayer.pocketSubType.name)
+                            )
 
                             handler.locker.acquire()
                             assert handler.response.responseLayer
@@ -177,6 +182,7 @@ def main_loop() -> None:
 
             else:
                 send_close(clientAddress)
+
 
 @profiler_scope()
 def create_handler(request: Pocket, clientAddress: tuple[str, int]) -> tuple[RequestHandler, Pocket] | None:
