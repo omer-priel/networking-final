@@ -1,7 +1,9 @@
 # entry point to Application
 
+import sys
 import logging
 
+from src.lib.profiler import use_profiler
 from src.app.config import init_config, init_logging
 from src.app.controller import main_loop
 from src.app.rudp import create_socket
@@ -25,4 +27,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if "--with-profiler" in sys.argv:
+        use_profiler(main)
+    else:
+        main()

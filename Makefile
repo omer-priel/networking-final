@@ -59,6 +59,9 @@ scripts-tc-20:
 start-app:
 	PYTHONPATH=. poetry run python src/app/main.py
 
+start-app-profile:
+	PYTHONPATH=. poetry run python src/app/main.py --with-profiler
+
 start-dhcp:
 	sudo python3 src/dhcp/main.py
 
