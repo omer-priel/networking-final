@@ -62,13 +62,15 @@ class TCPConnection(NetworkConnection):
 
     def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
         error: OSError | None = None
+        conn: socket.socket | None = None
         try:
             conn, address = self.recvSocket.accept()
             data = conn.recv(config.SOCKET_MAXSIZE)
         except socket.error as ex:
             error = ex
         finally:
-            conn.close()
+            if conn:
+                conn.close()
 
         if error:
             raise error
