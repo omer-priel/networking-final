@@ -22,9 +22,15 @@ Options:
 --client-port <port> - set the client port, defualt: 8001
 ```
 
-The DHCP server are simple DHCP that based on only python and json file for saving the data.
+* TCP Mode: \
+  In src/app/config.py you can change into TCP Mode (by defualt is false - UDP Mode) \
+  In this mode the app and the client will use TCP. but they will act like is UDP and all the parts of the RUDP \
+  will stay. Warrning this mode is only for the university - it will make the system slow!.
 
-The DNS is a local DNS server that has static domains and caching recodes that saved in a json file.
+Other Sub-projects:
+
+* The DHCP server are simple DHCP that based on only python and json file for saving the data.
+* The DNS is a local DNS server that has static domains and caching recodes that saved in a json file.
 
 ## Folders Structure
 

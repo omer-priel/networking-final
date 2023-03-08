@@ -63,7 +63,10 @@ class TCPConnection(NetworkConnection):
 
         try:
             sendSocket.connect(address)
+
+            # include the port into the packet
             data = self.hostAddress[1].to_bytes(2, byteorder="big") + data
+
             sendSocket.sendall(data)
         except socket.error:
             pass
@@ -85,6 +88,7 @@ class TCPConnection(NetworkConnection):
         if error:
             raise error
 
+        # exclude the port from the packet
         port = int.from_bytes(data[0:2], byteorder="big")
         data = data[2:]
         address = (originAddress[0], port)
