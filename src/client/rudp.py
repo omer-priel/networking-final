@@ -1,7 +1,6 @@
 # rudp
 
 import logging
-import socket
 import time
 
 from src.client.options import Options
@@ -110,7 +109,7 @@ def download_data(networkConnection: NetworkConnection, options: Options, resPoc
             data = networkConnection.recvfrom()[0]
             segmentPocket = Pocket.from_bytes(data)
             itFirstSegment = segmentPocket.basicLayer.pocketType == PocketType.Segment
-        except socket.error:
+        except OSError:
             pass
 
     # handle segments
@@ -134,7 +133,7 @@ def download_data(networkConnection: NetworkConnection, options: Options, resPoc
                 akcPocket = Pocket(BasicLayer(requestID, PocketType.ACK))
                 akcPocket.akcLayer = AKCLayer(segmentID)
                 networkConnection.sendto(bytes(akcPocket), options.appAddress)
-        except socket.error:
+        except OSError:
             pass
 
     # send complited download pocket to knowning the app that the file complited
@@ -150,7 +149,7 @@ def download_data(networkConnection: NetworkConnection, options: Options, resPoc
             data = networkConnection.recvfrom()[0]
             closePocket = Pocket.from_bytes(data)
             closed = closePocket.basicLayer.pocketType == PocketType.Close
-        except socket.error:
+        except OSError:
             pass
 
     # load body

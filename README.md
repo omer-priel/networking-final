@@ -128,7 +128,7 @@ make test-client-list-user-recursive
 make test-client-delete-all
 make test-client-delete-user
 make test-client-delete-user-without-password
-make make test-client-delete-user-multi
+make test-client-delete-user-multi
 make test-client-delete-root
 
 make test-client-not-found

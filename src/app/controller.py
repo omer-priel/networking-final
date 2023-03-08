@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import os.path
-import socket
 import threading
 import time
 import uuid
@@ -42,7 +41,7 @@ def main_loop() -> None:
     while True:
         try:
             data, clientAddress = recvfrom()
-        except socket.error:
+        except OSError:
             data = None
 
         if data:

@@ -173,12 +173,16 @@ def delete_command(networkConnection: NetworkConnection, options: Options, targe
     # handel response
     logging.debug("get res pocket: " + str(resPocket))
 
-    if not resPocket.responseLayer or not resPocket.deleteResponseLayer:
+    if not resPocket.responseLayer:
         print("Error: faild to delete the file")
         return None
 
     if not resPocket.responseLayer.ok:
         print("Error: " + resPocket.responseLayer.errorMessage)
+        return None
+
+    if not resPocket.deleteResponseLayer:
+        print("Error: faild to delete the file")
         return None
 
     if resPocket.deleteResponseLayer.isFile:
