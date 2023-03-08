@@ -1,13 +1,15 @@
 # DNS handlers
 
 import socket
-
+import logging
 
 from src.dns.config import config
 from src.dns.database import Database, RecordData
-from src.dns.packets import DNSPacket, DNSRecord, ip_to_str, str_to_ip
+from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord, str_to_ip
 
-def request_handler(dnsSocket: socket.socket, parentSocket: socket.socket, database: Database, query: DNSPacket, clientAddress: tuple[str, int]) -> None:
+def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, database: Database, query: DNSPacket, clientAddress: tuple[str, int]) -> None:
+    logging.info("Recived query from client")
+
     print(query)
 
     locals: list[RecordData | None] = [None] * query.queriesCount
@@ -15,29 +17,35 @@ def request_handler(dnsSocket: socket.socket, parentSocket: socket.socket, datab
     response: DNSPacket | None = None
 
     # find all the info from this local DNS
+    queriesRecords: list[DNSQueryRecord] = []
     i = 0
     missing = query.queriesCount
+
     for queryRecord in query.queriesRecords:
         recordData = database.get_active_record(queryRecord.domainName)
         if recordData:
             locals[i] = recordData
             missing -= 1
+        else:
+            queriesRecords += [queryRecord]
+
+        i += 1
 
     # find if need from the parent DNS
     if missing > 0:
-        queriesRecords: list[DNSRecord] = []
-        for i in range(query.queriesCount):
-            if not locals[i]:
-                queriesRecords += [query.queriesRecords[i]]
-
         nextQuery = DNSPacket(query.transactionID, query.flags, len(queriesRecords), 0, 0, 0)
         nextQuery.queriesRecords = queriesRecords
 
+        logging.info("Send query to parent DNS")
+
         parentSocket.sendto(bytes(nextQuery), (database.parent_dns, 53))
         try:
-            data, parentAddress = parentSocket.recvfrom(config.SOCKET_MAXSIZE)
+            data = parentSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
 
             response = DNSPacket.from_bytes(data)
+
+            logging.info("Recived response from parent DNS")
+            print(response)
         except socket.error:
             pass
 
@@ -54,15 +62,16 @@ def request_handler(dnsSocket: socket.socket, parentSocket: socket.socket, datab
 
     response.queriesCount = query.queriesCount
 
-    outside = response.answersRecords
-    response.answersRecords = []
-
     for recordData in locals:
         if recordData:
-            response.answersRecords += [DNSRecord(False, recordData.domain_name, 1, 1, recordData.ttl, str_to_ip(recordData.ip_address))]
+            response.answersRecords += [DNSAnswerRecord(recordData.domain_name, 1, 1, recordData.ttl, str_to_ip(recordData.ip_address))]
 
-    response.answersRecords += outside
     response.answersCount = len(response.answersRecords)
 
     # send the response
-    parentSocket.sendto(bytes(response), clientAddress)
+
+    logging.info("Send response to client")
+
+    print(clientAddress)
+
+    clientsSocket.sendto(bytes(response), clientAddress)

@@ -6,21 +6,22 @@ import struct
 
 # https://www.ietf.org/rfc/rfc1035.txt
 
-# TODO Need to serperate to Query Record and Annser Record
 
-class DNSRecord:
+class DNSPacketBase:
+    def __init__(self) -> None:
+        self.domainNames: dict[str, int] = {}
+
+
+class DNSQueryRecord:
     @staticmethod
-    def from_bytes(isQuery: bool, data: bytes, offset: int, queriesOffset: int) -> tuple[DNSRecord, int]:
-        domainName = ""
-        domainNameOffset = 0
+    def from_bytes(data: bytes, offset: int, packet: DNSPacketBase) -> tuple[DNSQueryRecord, int]:
+        queryOffset = offset
 
-        if not isQuery:
-            originOffset = offset + 2
-            offset = queriesOffset + int(data[offset + 1])
-            domainNameOffset = int(data[offset + 1])
+        domainName = ""
 
         labelLen = int(data[offset])
         offset += 1
+
         while labelLen > 0:
             if len(domainName) > 0:
                 domainName += "."
@@ -29,28 +30,65 @@ class DNSRecord:
             labelLen = int(data[offset])
             offset += 1
 
-        if not isQuery:
-            offset = originOffset
+        packet.domainNames[domainName] = queryOffset
 
         recordType, recordClass = struct.unpack_from(">HH", data, offset)
         offset += 4
 
-        ttl = 0
-        rData = b''
+        return (DNSQueryRecord(domainName, recordType, recordClass), offset)
 
-        if not isQuery:
-            ttl, rDataLength = struct.unpack_from(">HH", data, offset)
-            offset += 4
-            rData = data[offset: offset + rDataLength]
-            offset += rDataLength
+    def __init__(self, domainName: str, recordType: int, recordClass: int) -> None:
+        self.domainName = domainName
+        self.type = recordType
+        self.clase = recordClass
 
-        return (DNSRecord(isQuery, domainName, domainNameOffset, recordType, recordClass, ttl, rData), offset)
+    def __bytes__(self) -> bytes:
+        data = b''
 
-    def __init__(self, isQuery: bool, domainName: str, domainNameOffset: int, recordType: int, recordClass: int, ttl: int, rData: bytes) -> None:
-        self.isQuery = isQuery
+        for label in self.domainName.split('.'):
+            data += struct.pack(">B", len(label))
+            data += label.encode()
+        data += struct.pack(">B", 0)
+
+        data += struct.pack(">HH", self.type, self.clase)
+
+        return data
+
+    def __str__(self) -> str:
+        return (
+            " is query | name: {}, type: {}, class: {} |"
+        ).format(
+            self.domainName,
+            self.type,
+            self.clase,
+        )
+
+
+class DNSAnswerRecord:
+    @staticmethod
+    def from_bytes(data: bytes, offset: int, packet: DNSPacketBase) -> tuple[DNSAnswerRecord, int]:
+
+        offset += 1
+
+        domainNameOffset = int(data[offset])
+        reversedDomainNames = dict(zip(packet.domainNames.values(),packet.domainNames.keys()))
+        domainName = reversedDomainNames[domainNameOffset]
+        offset += 1
+
+        recordType, recordClass = struct.unpack_from(">HH", data, offset)
+        offset += 4
+
+        ttl, rDataLength = struct.unpack_from(">HH", data, offset)
+        offset += 4
+        rData = data[offset: offset + rDataLength]
+        offset += rDataLength
+
+        return (DNSAnswerRecord(packet, domainName, recordType, recordClass, ttl, rData), offset)
+
+    def __init__(self, packet: DNSPacketBase, domainName: str, recordType: int, recordClass: int, ttl: int, rData: bytes) -> None:
+        self.packet = packet
 
         self.domainName = domainName
-        self.domainNameOffset = domainNameOffset
         self.type = recordType
         self.clase = recordClass
 
@@ -60,28 +98,20 @@ class DNSRecord:
     def __bytes__(self) -> bytes:
         data = b''
 
-        if self.isQuery:
-            for label in self.domainName.split('.'):
-                data += struct.pack(">B", len(label))
-                data += label.encode()
-            data += struct.pack(">B", 0)
-        else:
-            data += b"\xc0"
-            data += bytes([self.domainNameOffset])
+        data += b"\xc0"
+        data += bytes([self.packet.domainNames[self.domainName]])
 
         data += struct.pack(">HH", self.type, self.clase)
 
-        if not self.isQuery:
-            data += struct.pack(">HH", self.ttl, len(self.rData))
-            data += self.rData
+        data += struct.pack(">HH", self.ttl, len(self.rData))
+        data += self.rData
 
         return data
 
     def __str__(self) -> str:
         return (
-            " isQuery: {}, name: {}, type: {}, class: {}, ttl: {}, data length: {} |"
+            " answer, name: {}, type: {}, class: {}, ttl: {}, data length: {} |"
         ).format(
-            self.isQuery,
             self.domainName,
             self.type,
             self.clase,
@@ -147,7 +177,7 @@ class DNSFlags:
             ).format(self.opcode, self.authoritative, self.truncated, self.recdesired, self.recavail, self.z, self.authenticated, self.checkdisable, self.rcode)
 
 
-class DNSPacket:
+class DNSPacket(DNSPacketBase):
     @staticmethod
     def from_bytes(data: bytes) -> DNSPacket:
         offset = 0
@@ -163,30 +193,31 @@ class DNSPacket:
 
         packet = DNSPacket(transactionID, DNSFlags.from_bytes(flags), queriesCount, answersCount, authorityCount, additionalCount)
 
-        queriesOffset = offset
         while queriesCount > 0:
-            record, offset = DNSRecord.from_bytes(True, data, offset, queriesOffset)
+            record, offset = DNSQueryRecord.from_bytes(data, offset, packet)
             packet.queriesRecords += [record]
             queriesCount -= 1
 
         while answersCount > 0:
-            record, offset = DNSRecord.from_bytes(False, data, offset, queriesOffset)
+            record, offset = DNSAnswerRecord.from_bytes(data, offset, packet)
             packet.answersRecords += [record]
             answersCount -= 1
 
         while authorityCount > 0:
-            record, offset = DNSRecord.from_bytes(False, data, offset, queriesOffset)
+            record, offset = DNSAnswerRecord.from_bytes(data, offset, packet)
             packet.authorityCount += [record]
             authorityCount -= 1
 
         while additionalCount > 0:
-            record, offset = DNSRecord.from_bytes(False, data, offset, queriesOffset)
+            record, offset = DNSAnswerRecord.from_bytes(data, offset, packet)
             packet.additionalRecords += [record]
             additionalCount -= 1
 
         return packet
 
     def __init__(self, transactionID: bytes, flags: DNSFlags, queriesCount: int, answersCount: int, authorityCount: int, additionalCount: int) -> None:
+        DNSPacketBase.__init__(self)
+
         self.transactionID = transactionID
         self.flags = flags
 
@@ -195,10 +226,10 @@ class DNSPacket:
         self.authorityCount = authorityCount
         self.additionalCount = additionalCount
 
-        self.queriesRecords: list[DNSRecord] = []
-        self.answersRecords: list[DNSRecord] = []
-        self.authorityRecords: list[DNSRecord] = []
-        self.additionalRecords: list[DNSRecord] = []
+        self.queriesRecords: list[DNSQueryRecord] = []
+        self.answersRecords: list[DNSAnswerRecord] = []
+        self.authorityRecords: list[DNSAnswerRecord] = []
+        self.additionalRecords: list[DNSAnswerRecord] = []
 
     def __bytes__(self) -> bytes:
         data = self.transactionID
@@ -206,7 +237,11 @@ class DNSPacket:
 
         data += struct.pack(">HHHH", self.queriesCount, self.answersCount, self.authorityCount, self.additionalCount)
 
-        for record in self.queriesRecords + self.answersRecords + self.authorityRecords + self.additionalRecords:
+        for record in self.queriesRecords:
+            self.domainNames[record.domainName] = len(data)
+            data += bytes(record)
+
+        for record in self.answersRecords + self.authorityRecords + self.additionalRecords:
             data += bytes(record)
 
         return data
@@ -234,4 +269,4 @@ def ip_to_str(data: bytes) -> str:
 
 
 def str_to_ip(address: str) -> bytes:
-    return bytes([int(num) for num in "255.255.0.255".split(".")])
+    return bytes([int(num) for num in address.split(".")])
