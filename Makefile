@@ -64,7 +64,7 @@ start-dhcp:
 	sudo ./.venv/bin/python3 src/dhcp/main.py
 
 start-dns:
-	PYTHONPATH=. poetry run python src/dns/main.py
+	sudo ./.venv/bin/python3 src/dns/main.py
 
 # testing
 test-client-help:
@@ -317,3 +317,29 @@ dhcp-edit-config-file:
 
 dhcp-edit-leases-file:
 	sudo nano /var/lib/dhcp/dhclient.leases
+
+test-dns-ask-google:
+	nslookup google.com localhost
+
+test-dns-ask-youtube:
+	nslookup www.youtube.com localhost
+
+test-dns-ask-wikipedia:
+	nslookup en.wikipedia.org localhost
+
+test-dns-ask-facebook:
+	nslookup www.facebook.com localhost
+
+test-dns-ask-app:
+	nslookup app.final.project.local localhost
+
+test-dns-all:
+	nslookup google.com localhost
+	nslookup google.com localhost
+	nslookup google.com localhost
+	nslookup www.youtube.com localhost
+	nslookup www.youtube.com localhost
+	nslookup en.wikipedia.org localhost
+	nslookup www.facebook.com localhost
+	nslookup app.final.project.local localhost
+	nslookup app.final.project.local localhost
