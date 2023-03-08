@@ -22,9 +22,15 @@ Options:
 --client-port <port> - set the client port, defualt: 8001
 ```
 
-The DHCP server are simple DHCP that based on only python and json file for saving the data.
+* TCP Mode: \
+  In src/app/config.py you can change into TCP Mode (by defualt is false - UDP Mode) \
+  In this mode the app and the client will use TCP. but they will act like is UDP and all the parts of the RUDP \
+  will stay. Warrning this mode is only for the university - it will make the system slow!.
 
-The DNS is a local DNS server that has static domains and caching recodes that saved in a json file.
+Other Sub-projects:
+
+* The DHCP server are simple DHCP that based on only python and json file for saving the data.
+* The DNS is a local DNS server that has static domains and caching recodes that saved in a json file.
 
 ## Folders Structure
 
@@ -49,6 +55,7 @@ The DNS is a local DNS server that has static domains and caching recodes that s
 Support linux OS only.
 
 * python 3.10.x
+* conda
 * poetry
 
 ## Installation
@@ -56,7 +63,11 @@ Support linux OS only.
 Run the folow command in the terminal:
 
 ```bash
-make install
+conda env create -f environment.yml
+conda activate networking_fianl
+poetry --version
+poetry config virtualenvs.in-project false
+poetry install
 ```
 
 ## App - Client
@@ -96,7 +107,7 @@ At first, check that the server is running. after that run the folow commands in
 
 ```bash
 make test-client-help
-make test-client-all
+make test-client-upload-all
 make test-client-upload-10000
 make test-client-upload-child-10000
 make test-client-upload-range
@@ -123,7 +134,7 @@ make test-client-list-user-recursive
 make test-client-delete-all
 make test-client-delete-user
 make test-client-delete-user-without-password
-make make test-client-delete-user-multi
+make test-client-delete-user-multi
 make test-client-delete-root
 
 make test-client-not-found
