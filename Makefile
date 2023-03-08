@@ -63,7 +63,7 @@ start-dhcp:
 	sudo python3 src/dhcp/main.py
 
 start-dns:
-	sudo ./.venv/bin/python3 src/dns/main.py
+	sudo python3 src/dns/main.py
 
 # testing
 test-client-help:
