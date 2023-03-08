@@ -5,8 +5,8 @@ import socket
 
 from src.dns.config import config
 from src.dns.database import Database
-from src.dns.packets import DNSPacket
 from src.dns.handlers import request_handler
+from src.dns.packets import DNSPacket
 
 
 def create_socket() -> tuple[socket.socket, socket.socket]:

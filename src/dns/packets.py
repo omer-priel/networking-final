@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import struct
 
+from src.dns.converters import ip_bytes_to_str, pack_int, unpack_host_name, unpack_int_from
+
 # https://www.ietf.org/rfc/rfc1035.txt
 
-from src.dns.converters import unpack_host_name, unpack_int_from, pack_int, ip_bytes_to_str
 
 class DNSPacketBase:
     def __init__(self) -> None:
@@ -33,12 +34,12 @@ class DNSQueryRecord:
         self.clase = recordClass
 
     def __bytes__(self) -> bytes:
-        data = b''
+        data = b""
 
-        for label in self.domainName.split('.'):
+        for label in self.domainName.split("."):
             data += pack_int(len(label), 1)
             data += label.encode()
-        data += b'\0'
+        data += b"\0"
 
         data += pack_int(self.type, 2)
         data += pack_int(self.clase, 2)
@@ -46,9 +47,7 @@ class DNSQueryRecord:
         return data
 
     def __str__(self) -> str:
-        return (
-            " query, name: {}, type: {}, class: {} |"
-        ).format(
+        return (" query, name: {}, type: {}, class: {} |").format(
             self.domainName,
             self.type,
             self.clase,
@@ -61,7 +60,7 @@ class DNSAnswerRecord:
         offset += 1
 
         domainNameOffset = int(data[offset])
-        reversedDomainNames = dict(zip(packet.domainNames.values(),packet.domainNames.keys()))
+        reversedDomainNames = dict(zip(packet.domainNames.values(), packet.domainNames.keys()))
         domainName = reversedDomainNames[domainNameOffset]
         offset += 1
 
@@ -74,16 +73,18 @@ class DNSAnswerRecord:
 
         nameOffset = offset
 
-        rData = data[offset: offset + rDataLength]
+        rData = data[offset : offset + rDataLength]
         offset += rDataLength
 
-        if recordType == 5: # CNAME
+        if recordType == 5:  # CNAME
             cName = unpack_host_name(rData[:-2], 0)[0]
             packet.domainNames[cName] = nameOffset
 
         return (DNSAnswerRecord(packet, domainName, recordType, recordClass, ttl, rData), offset)
 
-    def __init__(self, packet: DNSPacketBase, domainName: str, recordType: int, recordClass: int, ttl: int, rData: bytes) -> None:
+    def __init__(
+        self, packet: DNSPacketBase, domainName: str, recordType: int, recordClass: int, ttl: int, rData: bytes
+    ) -> None:
         self.packet = packet
 
         self.domainName = domainName
@@ -94,7 +95,7 @@ class DNSAnswerRecord:
         self.rData = rData
 
     def to_bytes(self, offset: int) -> bytes:
-        data = b''
+        data = b""
 
         data += b"\xc0"
         data += bytes([self.packet.domainNames[self.domainName]])
@@ -107,7 +108,7 @@ class DNSAnswerRecord:
 
         data += self.rData
 
-        if self.type == 5: # CNAME
+        if self.type == 5:  # CNAME
             name = unpack_host_name(self.rData, 0)[0]
             self.packet.domainNames[name] = offset + 10
 
@@ -116,19 +117,13 @@ class DNSAnswerRecord:
     def __str__(self) -> str:
         dataAsStr = str(len(self.rData))
 
-        if self.type == 1: # A
+        if self.type == 1:  # A
             dataAsStr = ip_bytes_to_str(self.rData)
-        elif self.type == 5: # CNAME
+        elif self.type == 5:  # CNAME
             dataAsStr = unpack_host_name(self.rData, 0)[0]
 
-        return (
-            " answer, name: {}, type: {}, class: {}, ttl: {}, data: {} |"
-        ).format(
-            self.domainName,
-            self.type,
-            self.clase,
-            self.ttl,
-            dataAsStr
+        return (" answer, name: {}, type: {}, class: {}, ttl: {}, data: {} |").format(
+            self.domainName, self.type, self.clase, self.ttl, dataAsStr
         )
 
 
@@ -155,9 +150,23 @@ class DNSFlags:
 
         isResponse = b1 & 2**0 > 0
 
-        return DNSFlags(isResponse, opcode, authoritative, truncated, recdesired, recavail, z, authenticated, checkdisable, rcode)
+        return DNSFlags(
+            isResponse, opcode, authoritative, truncated, recdesired, recavail, z, authenticated, checkdisable, rcode
+        )
 
-    def __init__(self, isResponse: bool, opcode: int, authoritative: bool, truncated: bool, recdesired: bool, recavail: bool, z: bool, authenticated: bool, checkdisable: bool, rcode: int):
+    def __init__(
+        self,
+        isResponse: bool,
+        opcode: int,
+        authoritative: bool,
+        truncated: bool,
+        recdesired: bool,
+        recavail: bool,
+        z: bool,
+        authenticated: bool,
+        checkdisable: bool,
+        rcode: int,
+    ):
         self.isResponse = isResponse
         self.opcode = opcode
         self.authoritative = authoritative
@@ -170,23 +179,34 @@ class DNSFlags:
         self.rcode = rcode
 
     def __bytes__(self) -> bytes:
-        b2 = self.rcode + self.checkdisable * 2 ** 4
-        b2 += self.authenticated * 2 ** 5 + self.z * 2 ** 6 + self.recavail * 2 ** 7
+        b2 = self.rcode + self.checkdisable * 2**4
+        b2 += self.authenticated * 2**5 + self.z * 2**6 + self.recavail * 2**7
 
-        b1 = self.recdesired * 2 ** 0 + self.truncated * 2 ** 1 + self.authoritative * 2 ** 2
-        b1 += self.opcode * 2 ** 3 + self.isResponse * 2 ** 7
+        b1 = self.recdesired * 2**0 + self.truncated * 2**1 + self.authoritative * 2**2
+        b1 += self.opcode * 2**3 + self.isResponse * 2**7
 
         return bytes([b1, b2])
 
     def __str__(self) -> str:
         if not self.isResponse:
-            return (
-                    "query (opcode: {}, truncated: {}, recdesired: {}, z: {}, check disable: {})"
-                ).format(self.opcode, self.truncated, self.recdesired, self.z, self.checkdisable)
+            return ("query (opcode: {}, truncated: {}, recdesired: {}, z: {}, check disable: {})").format(
+                self.opcode, self.truncated, self.recdesired, self.z, self.checkdisable
+            )
 
         return (
-                "response (opcode: {}, authoritative: {}, truncated: {}, recdesired: {}, recavail: {}, z: {}, authenticated: {}, check disable: {}, rcode: {})"
-            ).format(self.opcode, self.authoritative, self.truncated, self.recdesired, self.recavail, self.z, self.authenticated, self.checkdisable, self.rcode)
+            "response (opcode: {}, authoritative: {}, truncated: {}, recdesired: {}, recavail: {}"
+            + ", z: {}, authenticated: {}, check disable: {}, rcode: {})"
+        ).format(
+            self.opcode,
+            self.authoritative,
+            self.truncated,
+            self.recdesired,
+            self.recavail,
+            self.z,
+            self.authenticated,
+            self.checkdisable,
+            self.rcode,
+        )
 
 
 class DNSPacket(DNSPacketBase):
@@ -194,16 +214,18 @@ class DNSPacket(DNSPacketBase):
     def from_bytes(data: bytes) -> DNSPacket:
         offset = 0
 
-        transactionID = data[offset:offset + 2]
+        transactionID = data[offset : offset + 2]
         offset += 2
 
-        flags = data[offset:offset + 2]
+        flags = data[offset : offset + 2]
         offset += 2
 
         queriesCount, answersCount, authorityCount, additionalCount = struct.unpack_from(">HHHH", data, offset)
         offset += 4 * 2
 
-        packet = DNSPacket(transactionID, DNSFlags.from_bytes(flags), queriesCount, answersCount, authorityCount, additionalCount)
+        packet = DNSPacket(
+            transactionID, DNSFlags.from_bytes(flags), queriesCount, answersCount, authorityCount, additionalCount
+        )
 
         while queriesCount > 0:
             record, offset = DNSQueryRecord.from_bytes(data, offset, packet)
@@ -227,7 +249,15 @@ class DNSPacket(DNSPacketBase):
 
         return packet
 
-    def __init__(self, transactionID: bytes, flags: DNSFlags, queriesCount: int, answersCount: int, authorityCount: int, additionalCount: int) -> None:
+    def __init__(
+        self,
+        transactionID: bytes,
+        flags: DNSFlags,
+        queriesCount: int,
+        answersCount: int,
+        authorityCount: int,
+        additionalCount: int,
+    ) -> None:
         DNSPacketBase.__init__(self)
 
         self.transactionID = transactionID
@@ -267,7 +297,7 @@ class DNSPacket(DNSPacketBase):
             self.queriesCount,
             self.answersCount,
             self.authorityCount,
-            self.additionalCount
+            self.additionalCount,
         )
 
         for record in self.queriesRecords + self.answersRecords + self.authorityRecords + self.additionalRecords:

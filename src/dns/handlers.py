@@ -1,17 +1,23 @@
 # DNS handlers
 
-import socket
 import logging
 import random
+import socket
 import time
 
 from src.dns.config import config
-from src.dns.database import Database, RecordData, save_database, CacheRecord
-from src.dns.packets import DNSPacket, DNSQueryRecord, DNSAnswerRecord
-from src.dns.converters import ip_str_to_bytes, pack_int, unpack_int_from, ip_bytes_to_str
+from src.dns.converters import ip_bytes_to_str, ip_str_to_bytes, pack_int, unpack_int_from
+from src.dns.database import CacheRecord, Database, RecordData, save_database
+from src.dns.packets import DNSAnswerRecord, DNSPacket, DNSQueryRecord
 
 
-def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, database: Database, query: DNSPacket, clientAddress: tuple[str, int]) -> None:
+def request_handler(
+    clientsSocket: socket.socket,
+    parentSocket: socket.socket,
+    database: Database,
+    query: DNSPacket,
+    clientAddress: tuple[str, int],
+) -> None:
     logging.info("Recived query from client")
 
     logging.debug(query)
@@ -38,7 +44,9 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
     # find if need from the parent DNS
     if missing > 0:
         transactionIDAsNum = unpack_int_from(query.transactionID, 0, 2)[0]
-        nextQuery = DNSPacket(pack_int(random.randint(1, transactionIDAsNum - 1), 2), query.flags, len(queriesRecords), 0, 0, 0)
+        nextQuery = DNSPacket(
+            pack_int(random.randint(1, transactionIDAsNum - 1), 2), query.flags, len(queriesRecords), 0, 0, 0
+        )
         nextQuery.queriesRecords = queriesRecords
 
         logging.info("Send query to parent DNS")
@@ -83,7 +91,11 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
 
     for recordData in locals:
         if recordData:
-            response.answersRecords += [DNSAnswerRecord(response, recordData.domain_name, 1, 1, recordData.ttl, ip_str_to_bytes(recordData.ip_address))]
+            response.answersRecords += [
+                DNSAnswerRecord(
+                    response, recordData.domain_name, 1, 1, recordData.ttl, ip_str_to_bytes(recordData.ip_address)
+                )
+            ]
 
     response.answersCount = len(response.answersRecords)
 
@@ -99,6 +111,8 @@ def save_cache_into_database(database: Database, response: DNSPacket):
     now = int(time.time())
     for recod in response.additionalRecords + response.authorityRecords + response.answersRecords:
         if recod.type == 1:  # A
-            database.cache_records[recod.domainName] = CacheRecord(ip_address=ip_bytes_to_str(recod.rData), expired_time=now + recod.ttl)
+            database.cache_records[recod.domainName] = CacheRecord(
+                ip_address=ip_bytes_to_str(recod.rData), expired_time=now + recod.ttl
+            )
 
     save_database(database)

@@ -34,9 +34,11 @@ class Database(BaseModel):
     parent_dns: str = "8.8.8.8"
 
     static_ttl: int = 360  # [s]
-    static_records: dict[str,Record] = {"app.final.project.local": Record(ip_address="127.0.0.1")}  # domain name : Record
+    static_records: dict[str, Record] = {
+        "app.final.project.local": Record(ip_address="127.0.0.1")
+    }  # domain name : Record
 
-    cache_records: dict[str,CacheRecord] = {} # domain name : CacheRecord
+    cache_records: dict[str, CacheRecord] = {}  # domain name : CacheRecord
 
     def get_active_record(self, domainName: str) -> RecordData | None:
         if domainName in self.static_records:

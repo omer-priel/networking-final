@@ -1,7 +1,6 @@
 # config of the DNS server
 
 import os
-import logging
 
 from dotenv import load_dotenv
 

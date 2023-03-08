@@ -1,6 +1,6 @@
 # entry point to DNS
 
-from src.dns.config import init_config, init_logging, config
+from src.dns.config import init_config, init_logging
 from src.dns.controller import main_loop
 from src.dns.database import get_database
 
