@@ -35,6 +35,7 @@ Other Sub-projects:
 ## Folders Structure
 
 * docs - Extra information
+* profiles - Contains the profile.json
 * res - Resources directory
 * src - Source code
   * app - The application server
