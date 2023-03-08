@@ -43,15 +43,24 @@ def request_handler(clientsSocket: socket.socket, parentSocket: socket.socket, d
         logging.info("Send query to parent DNS")
 
         parentSocket.sendto(bytes(nextQuery), (database.parent_dns, 53))
-        try:
-            data = parentSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
 
-            response = DNSPacket.from_bytes(data)
+        timeout = False
 
-            logging.info("Recived response from parent DNS")
-            logging.debug(response)
-        except socket.error:
-            pass
+        while not timeout:
+            try:
+                data = parentSocket.recvfrom(config.SOCKET_MAXSIZE)[0]
+
+                response = DNSPacket.from_bytes(data)
+
+                if response and response.flags.isResponse and response.transactionID == nextQuery.transactionID:
+                    timeout = True
+
+                    logging.info("Recived response from parent DNS")
+                    logging.debug(response)
+                else:
+                    timeout = False
+            except socket.error:
+                timeout = False
 
     # save the cache
     if response:
