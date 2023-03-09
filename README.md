@@ -56,7 +56,6 @@ Other Sub-projects:
 Support linux OS only.
 
 * python 3.10.x
-* conda
 * poetry
 
 ## Installation
@@ -64,10 +63,7 @@ Support linux OS only.
 Run the folow command in the terminal:
 
 ```bash
-conda env create -f environment.yml
-conda activate networking_fianl
-poetry --version
-poetry config virtualenvs.in-project false
+poetry config virtualenvs.in-project true
 poetry install
 ```
 

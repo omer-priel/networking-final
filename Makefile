@@ -5,9 +5,6 @@ temp:
 	mkdir temp
 
 # ci / cd
-install:
-	poetry install
-
 clean:
 	find . -name '*.pyc' -exec sudo rm -f {} +
 	find . -name '*.pyo' -exec sudo rm -f {} +
@@ -16,6 +13,7 @@ clean:
 	sudo rm -rf temp storage
 
 clean-all: clean
+	rm -rf .venv poetry.lock
 
 black:
 	 poetry run black ./src/
@@ -63,10 +61,10 @@ start-app-profile:
 	PYTHONPATH=. poetry run python src/app/main.py --with-profiler
 
 start-dhcp:
-	sudo python3 src/dhcp/main.py
+	sudo  ./.venv/bin/python3 src/dhcp/main.py
 
 start-dns:
-	sudo python3 src/dns/main.py
+	sudo  ./.venv/bin/python3 src/dns/main.py
 
 # testing
 test-client-help:
