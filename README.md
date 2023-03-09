@@ -335,6 +335,10 @@ dhcp.json fields:
 * pool_range - Range for the last part of the IP that the DHCP server returns
 * ip_address_leases - All the leases that the server gives
 
+Description on the packets: \
+The exists 6 types of packets in this server, and more that dos not used in this project. The \
+types are: Discover, Offer, Request, ACK, NAK and Relese. \
+
 ## DNS Server
 
 ### Environment Variables
