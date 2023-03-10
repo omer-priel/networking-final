@@ -37,12 +37,13 @@ def create_additional_options(database: Database, packet: DHCPPacket) -> dict[DH
     additional_options[DHCPOptionKey.SubnetMask] = database.subnet_mask
     additional_options[DHCPOptionKey.Router] = database.router
 
-    paramterReqestList = packet.options[DHCPOptionKey.ParamterRequestList]
-    if DHCPOptionKey.ParamterRequestList in packet.options and isinstance(paramterReqestList, list):
-        if DHCPParameterRequest.DomainNameServer in paramterReqestList and database.dns:
-            additional_options[DHCPOptionKey.DomainNameServer] = database.dns
-        if DHCPParameterRequest.BroadcastAddress in paramterReqestList and database.broadcast_address:
-            additional_options[DHCPOptionKey.BroadcastAddress] = database.broadcast_address
+    if DHCPOptionKey.ParamterRequestList in packet.options:
+        paramterReqestList = packet.options[DHCPOptionKey.ParamterRequestList]
+        if isinstance(paramterReqestList, list):
+            if DHCPParameterRequest.DomainNameServer in paramterReqestList and database.dns:
+                additional_options[DHCPOptionKey.DomainNameServer] = database.dns
+            if DHCPParameterRequest.BroadcastAddress in paramterReqestList and database.broadcast_address:
+                additional_options[DHCPOptionKey.BroadcastAddress] = database.broadcast_address
 
     return additional_options
 

@@ -304,6 +304,17 @@ test-dhcp-renew:
 	sudo dhclient -r
 	sudo dhclient
 
+test-dhcp-all:
+	ip a
+	sudo dhclient -r
+	ip a
+	sudo dhclient
+	ip a
+	sudo dhclient -r
+	ip a
+	sudo dhclient
+	ip a
+
 dhcp-show-my-ip:
 	ip a
 
