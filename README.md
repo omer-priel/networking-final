@@ -398,6 +398,7 @@ make test-dns-all
 * Python Struct: <https://docs.python.org/3.7/library/struct.html>
 * DHCP Wikipedia: <https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol>
 * DHCP defied and who it works: <https://www.networkworld.com/article/3299438/dhcp-defined-and-how-it-works.html>
+* DHCP Leases: <https://www.youtube.com/watch?v=5QhnovYb6yM>
 * DNS Wikipedia: <https://en.wikipedia.org/wiki/Domain_Name_System>
 * DNS RFC 1035: <https://www.ietf.org/rfc/rfc1035.txt>
 
