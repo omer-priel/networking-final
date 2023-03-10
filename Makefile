@@ -304,17 +304,6 @@ test-dhcp-renew:
 	sudo dhclient -r
 	sudo dhclient
 
-test-dhcp-all:
-	ip a
-	sudo dhclient -r
-	ip a
-	sudo dhclient
-	ip a
-	sudo dhclient -r
-	ip a
-	sudo dhclient
-	ip a
-
 dhcp-show-my-ip:
 	ip a
 
@@ -353,7 +342,7 @@ test-dns-all:
 	nslookup app.final.project.local localhost
 	nslookup google.com localhost
 	nslookup google.com localhost
-	sleep 80
+	sleep 300
 	nslookup google.com localhost
 	nslookup www.youtube.com localhost
 

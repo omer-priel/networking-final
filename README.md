@@ -332,6 +332,16 @@ sudo dhclient -r
 ip a
 sudo dhclient
 ip a
+sudo dhclient
+ip a
+sleep 40
+ip a
+sudo dhclient -r
+ip a
+sudo dhclient
+ip a
+sudo dhclient -r
+ip a
 ```
 
 ### Docs for development
