@@ -304,21 +304,8 @@ Run for open command in the terminal for opening the DHCP server:
 make start-dhcp
 ```
 
-### Testing
+### Config
 
-At first, check that the server is running. after that run the folow commands in the terminal:
-
-```bash
-ip a
-sudo dhclient -r
-ip a
-sudo dhclient
-ip a
-```
-
-### Docs for development
-
-Config: \
 Recive from port 67 and reply on port 68
 
 dhcp.json fields:
@@ -334,6 +321,20 @@ dhcp.json fields:
 * broadcast_address - IP for broadcasting or null, this field is optional
 * pool_range - Range for the last part of the IP that the DHCP server returns
 * ip_address_leases - All the leases that the server gives
+
+### Testing
+
+At first, check that the server is running. after that run the folow commands in the terminal:
+
+```bash
+ip a
+sudo dhclient -r
+ip a
+sudo dhclient
+ip a
+```
+
+### Docs for development
 
 Description on the packets: \
 The exists 6 types of packets in this server, and more that dos not used in this project. The \
@@ -353,26 +354,18 @@ The Environment Variables will be declaerd in src/dns/.env
 
 ### Get Started
 
-Run for open command in the terminal for opening the DHCP server:
+Run for open command in the terminal for opening the DNS server:
 
 ```bash
 make start-dns
 ```
 
-### Testing
-
-At first, check that the server is running. after that run the folow commands in the terminal:
-
-```bash
-make test-dns-all
-```
-
-### Docs for development
+### Config
 
 Config: \
 Recive from port 53
 
-dhcp.json fields:
+dns.json fields:
 
 * parent_dns - IP Address of parent DNS server of this server
 * static_ttl - The Time To Live in seconds for the domains of this server
@@ -381,6 +374,14 @@ dhcp.json fields:
 * cache_records - Cashed A Records, the key is the domain of the record
   * ip_address - IP Address of the domain
   * expired_time - When the record is expired in seconds
+
+### Testing
+
+At first, check that the server is running. after that run the folow commands in the terminal:
+
+```bash
+make test-dns-all
+```
 
 ## Links
 

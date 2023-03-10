@@ -339,6 +339,14 @@ test-dns-ask-app:
 	nslookup app.final.project.local localhost
 
 test-dns-all:
+	nslookup app.final.project.local localhost
+	nslookup google.com localhost
+	nslookup google.com localhost
+	sleep 80
+	nslookup google.com localhost
+	nslookup www.youtube.com localhost
+
+test-dns-all-origin:
 	nslookup google.com localhost
 	nslookup google.com localhost
 	nslookup google.com localhost
