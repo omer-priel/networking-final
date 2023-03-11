@@ -64,7 +64,7 @@ class BasicLayer(LayerInterface):
 
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> BasicLayer:
-        pocketType, pocketSubType, requestID = struct.unpack_from("BBL", data, offset)
+        pocketType, pocketSubType, requestID = struct.unpack_from("BBQ", data, offset)
         return BasicLayer(
             requestID,
             PocketType(pocketType),  # type: ignore
@@ -89,11 +89,11 @@ class BasicLayer(LayerInterface):
         self.requestID = requestID
 
     def __len__(self) -> int:
-        return struct.calcsize("BBL")
+        return struct.calcsize("BBQ")
 
     def __bytes__(self) -> bytes:
         return struct.pack(
-            "BBL",
+            "BBQ",
             self.pocketType,
             self.pocketSubType,
             self.requestID,
