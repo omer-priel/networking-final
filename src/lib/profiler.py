@@ -15,7 +15,7 @@ PROFILE_PATH = "profiles/profile.json"
 # globals
 isFirstEvent: bool = True
 staretdTs: int = 0
-profileStream: TextIOWrapper = ...  # type: ignore[assignment]
+profileStream: TextIOWrapper | None = None  # type: ignore[assignment]
 
 
 def use_profiler(entryPoint: Callable[[], None]) -> None:
@@ -46,6 +46,9 @@ def use_profiler(entryPoint: Callable[[], None]) -> None:
 def profiler_add_event(name: str) -> None:
     global isFirstEvent
 
+    if not profileStream:
+        return None
+
     if isFirstEvent:
         isFirstEvent = False
     else:
@@ -63,6 +66,9 @@ def profiler_add_event(name: str) -> None:
 
 def profiler_add_scope(name: str, startTs: int, endTs: int) -> None:
     global isFirstEvent
+
+    if not profileStream:
+        return None
 
     startTs -= staretdTs
     endTs -= staretdTs
