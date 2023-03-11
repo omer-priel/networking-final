@@ -38,9 +38,6 @@ def test_app_download_block():
 
 def test_app_download_binary_files():
     test_app_upload_binary_files()
-    os.system("poetry run python src/client/main.py download block.txt {}/block.txt".format(TESTS_DOWNLOADS_DIRECTORY))
-
-    assert filecmp.cmp(APP_STORAGE_DIRECTORY + "/public/block.txt", TESTS_DOWNLOADS_DIRECTORY + "/block.txt")
 
     files = ["document.pdf", "image.png", "image.tif", "md.md"]
     for fileName in files:
@@ -52,9 +49,6 @@ def test_app_download_binary_files():
 #@pytest.mark.skip()
 def test_app_download_big_binary_files():
     test_app_upload_big_binary_files()
-    os.system("poetry run python src/client/main.py download block.txt {}/block.txt".format(TESTS_DOWNLOADS_DIRECTORY))
-
-    assert filecmp.cmp(APP_STORAGE_DIRECTORY + "/public/block.txt", TESTS_DOWNLOADS_DIRECTORY + "/block.txt")
 
     files = ["audio.mp3", "video.avi", "video.mp4"]
     for fileName in files:
