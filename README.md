@@ -144,6 +144,7 @@ Every Request / Response are made from Base Layer and the content layer
 * Upload - Upload File / Directory
 * Download - Download File / Directory
 * List
+* Delete - Delete File / Directory
 
 #### RUDP Level
 

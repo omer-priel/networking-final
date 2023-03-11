@@ -106,8 +106,8 @@ class BasicLayer(LayerInterface):
 class RequestLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> RequestLayer:
-        pocketFullSize, maxSingleSegmentSize, anonymous, userNameLength = struct.unpack_from("LL?I", data, offset)
-        offset += struct.calcsize("LL?I")
+        pocketFullSize, maxSingleSegmentSize, anonymous, userNameLength = struct.unpack_from("QQ?I", data, offset)
+        offset += struct.calcsize("QQ?I")
         userName = ""
         password = ""
         if not anonymous:
@@ -146,11 +146,11 @@ class RequestLayer(LayerInterface):
         self.password = password
 
     def __len__(self) -> int:
-        return struct.calcsize("LL?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
+        return struct.calcsize("QQ?I") + len(self.userName) + struct.calcsize("I") + len(self.password)
 
     def __bytes__(self) -> bytes:
         ret = struct.pack(
-            "LL?I",
+            "QQ?I",
             self.pocketFullSize,
             self.maxSingleSegmentSize,
             self.anonymous,
@@ -177,7 +177,7 @@ class ResponseLayer(LayerInterface):
         else:
             errorMessage = data[offset : offset + errorMessageLength].decode()
             offset += errorMessageLength
-        dataSize, segmentsAmount, singleSegmentSize = struct.unpack_from("LLL", data, offset)
+        dataSize, segmentsAmount, singleSegmentSize = struct.unpack_from("QQQ", data, offset)
         return ResponseLayer(ok, errorMessage, dataSize, segmentsAmount, singleSegmentSize)
 
     def __init__(
@@ -202,12 +202,12 @@ class ResponseLayer(LayerInterface):
         self.singleSegmentSize = singleSegmentSize
 
     def __len__(self) -> int:
-        return struct.calcsize("?B") + len(self.errorMessage) + struct.calcsize("LLL")
+        return struct.calcsize("?B") + len(self.errorMessage) + struct.calcsize("QQQ")
 
     def __bytes__(self) -> bytes:
         ret = struct.pack("?B", self.ok, len(self.errorMessage))
         ret += self.errorMessage.encode()
-        ret += struct.pack("LLL", self.dataSize, self.segmentsAmount, self.singleSegmentSize)
+        ret += struct.pack("QQQ", self.dataSize, self.segmentsAmount, self.singleSegmentSize)
         return ret
 
     def __str__(self) -> str:
@@ -219,8 +219,8 @@ class ResponseLayer(LayerInterface):
 class SegmentLayer(LayerInterface):
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> SegmentLayer:
-        segmentID, segmentLength = struct.unpack_from("LI", data, offset)
-        offset += struct.calcsize("LI")
+        segmentID, segmentLength = struct.unpack_from("QI", data, offset)
+        offset += struct.calcsize("QI")
         segment = data[offset : offset + segmentLength]
         return SegmentLayer(segmentID, segment)
 
@@ -235,10 +235,10 @@ class SegmentLayer(LayerInterface):
         self.data = data
 
     def __len__(self) -> int:
-        return struct.calcsize("LI") + len(self.data)
+        return struct.calcsize("QI") + len(self.data)
 
     def __bytes__(self) -> bytes:
-        return struct.pack("LI", self.segmentID, len(self.data)) + self.data
+        return struct.pack("QI", self.segmentID, len(self.data)) + self.data
 
     def __str__(self) -> str:
         return " segment: {}, length: {} |".format(self.segmentID, len(self.data))
@@ -249,7 +249,7 @@ class AKCLayer(LayerInterface):
 
     @staticmethod
     def from_bytes(data: bytes, offset: int) -> AKCLayer:
-        segmentID = struct.unpack_from("L", data, offset)[0]
+        segmentID = struct.unpack_from("Q", data, offset)[0]
         return AKCLayer(segmentID)
 
     def __init__(self, segmentID: int) -> None:
@@ -260,10 +260,10 @@ class AKCLayer(LayerInterface):
         self.segmentID = segmentID
 
     def __len__(self) -> int:
-        return struct.calcsize("L")
+        return struct.calcsize("Q")
 
     def __bytes__(self) -> bytes:
-        return struct.pack("L", self.segmentID)
+        return struct.pack("Q", self.segmentID)
 
     def __str__(self) -> str:
         return " akc-to-segment: {} |".format(self.segmentID)
@@ -493,7 +493,7 @@ def pack_file_block(fileName: str, updatedAt: float, fileSize: int) -> bytes:
         struct.pack("?", False)
         + struct.pack("I", len(fileName))
         + fileName.encode()
-        + struct.pack("dL", updatedAt, fileSize)
+        + struct.pack("dQ", updatedAt, fileSize)
     )
 
 
@@ -514,8 +514,8 @@ def unpack_file_block(data: bytes, offset: int) -> tuple[tuple[str, float, int],
     else:
         fileName = bytes.decode(data[offset : offset + fileNameLength])
     offset += fileNameLength
-    updatedAt, fileSize = struct.unpack_from("dL", data, offset)
-    offset += struct.calcsize("dL")
+    updatedAt, fileSize = struct.unpack_from("dQ", data, offset)
+    offset += struct.calcsize("dQ")
 
     return ((fileName, updatedAt, fileSize), offset)
 
