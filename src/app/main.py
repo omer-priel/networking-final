@@ -5,7 +5,7 @@ import sys
 
 from src.app.config import init_config, init_logging
 from src.app.controller import main_loop
-from src.app.rudp import create_socket
+from src.app.rudp import close_socket, create_socket
 from src.app.storage import init_strorage
 from src.lib.profiler import profiler_scope, use_profiler
 
@@ -24,7 +24,12 @@ def main() -> None:
     init_app()
     create_socket()
 
-    main_loop()
+    try:
+        main_loop()
+    except KeyboardInterrupt:
+        logging.info("Closed by a User!")
+
+    close_socket()
 
 
 if __name__ == "__main__":

@@ -26,6 +26,12 @@ def create_socket() -> None:
     logging.info("The app socket initialized on " + config.APP_HOST + ":" + str(config.APP_PORT))
 
 
+def close_socket() -> None:
+    global appSocket
+
+    appSocket.close()
+
+
 def sendto(pocket: Pocket, clientAddress: tuple[str, int]) -> None:
     appSocket.sendto(bytes(pocket), clientAddress)
 

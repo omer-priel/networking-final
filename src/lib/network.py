@@ -19,6 +19,10 @@ class NetworkConnection(ABC):
     def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
         ...
 
+    @abstractmethod
+    def close(self) -> None:
+        ...
+
 
 class UDPConnection(NetworkConnection):
     interfceSocket: socket.socket = ...  # type: ignore[assignment]
@@ -36,6 +40,9 @@ class UDPConnection(NetworkConnection):
 
     def recvfrom(self) -> tuple[bytes, tuple[str, int]]:
         return self.interfceSocket.recvfrom(config.SOCKET_MAXSIZE)
+
+    def close(self) -> None:
+        self.interfceSocket.close()
 
 
 class TCPConnection(NetworkConnection):
@@ -94,6 +101,9 @@ class TCPConnection(NetworkConnection):
         address = (originAddress[0], port)
 
         return (data, address)
+
+    def close(self) -> None:
+        self.recvSocket.close()
 
 
 def create_network_connection(hostAddress: tuple[str, int]) -> NetworkConnection:

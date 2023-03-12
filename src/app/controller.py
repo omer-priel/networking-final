@@ -168,7 +168,18 @@ def main_loop() -> None:
 
                             send_close(handler.get_client_address())
 
-                            logging.info("downloading {} type \"{}\"".format(handler.requestID, str(handler.request.basicLayer.pocketSubType.name)))
+                            if handler.request.downloadRequestLayer:
+                                logging.info(
+                                    'Download ID {} of "{}" complited'.format(
+                                        handler.requestID, handler.request.downloadRequestLayer.path
+                                    )
+                                )
+                            elif handler.request.listRequestLayer:
+                                logging.info(
+                                    'List ID {} of "{}" complited'.format(
+                                        handler.requestID, handler.request.listRequestLayer.path
+                                    )
+                                )
 
                             handlersLock.acquire()
                             handlers.pop(handler.get_requestID())

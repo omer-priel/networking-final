@@ -4,10 +4,11 @@ import os
 import os.path
 import shutil
 
-TESTS_UPLOADS_DIRECTORY= "tests-files/uploads"
+TESTS_UPLOADS_DIRECTORY = "tests-files/uploads"
 TESTS_DOWNLOADS_DIRECTORY = "tests-files/downloads"
 
 APP_STORAGE_DIRECTORY = "storage"
+
 
 def needs_downloads_directory(needsEmpty: bool = True) -> None:
     if os.path.isdir(TESTS_DOWNLOADS_DIRECTORY):

@@ -129,6 +129,7 @@ def main() -> None:
         print("The client socket initialized on " + options.clientAddress[0] + ":" + str(options.clientAddress[1]))
 
         upload_command(networkConnection, options, targetPath, destination)
+        networkConnection.close()
     elif sys.argv[i] == "download":
         if len(sys.argv) == i + 1:
             print("File / directory path and destination path are Missing!")
@@ -144,6 +145,7 @@ def main() -> None:
         print("The client socket initialized on " + options.clientAddress[0] + ":" + str(options.clientAddress[1]))
 
         download_command(networkConnection, options, targetPath, destination)
+        networkConnection.close()
 
     elif sys.argv[i] == "list":
         recursive = False
@@ -161,6 +163,7 @@ def main() -> None:
         print("The client socket initialized on " + options.clientAddress[0] + ":" + str(options.clientAddress[1]))
 
         list_command(networkConnection, options, directoryPath, recursive)
+        networkConnection.close()
     elif sys.argv[i] == "delete":
         if len(sys.argv) == i + 1:
             print("File / directory path is Missing!")
@@ -172,7 +175,7 @@ def main() -> None:
         print("The client socket initialized on " + options.clientAddress[0] + ":" + str(options.clientAddress[1]))
 
         delete_command(networkConnection, options, targetPath)
-
+        networkConnection.close()
     else:
         print('The command "{}" not exists'.format(sys.argv[i]))
 

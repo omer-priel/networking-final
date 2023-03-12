@@ -1,47 +1,63 @@
 # testing upload command
 
-import os
 import filecmp
+import os
 import time
-import pytest
 
-from src.tests.helpers import TESTS_UPLOADS_DIRECTORY, APP_STORAGE_DIRECTORY
+from src.tests.helpers import APP_STORAGE_DIRECTORY, TESTS_UPLOADS_DIRECTORY
 
-def test_app_upload_empty():
+
+def test_app_upload_empty() -> None:
     os.system("poetry run python src/client/main.py upload {}/empty.md".format(TESTS_UPLOADS_DIRECTORY))
 
     assert filecmp.cmp(TESTS_UPLOADS_DIRECTORY + "/empty.md", APP_STORAGE_DIRECTORY + "/public/empty.md")
 
-def test_app_upload_simple():
-    os.system("poetry run python src/client/main.py upload {}/md.md --dest md-renamed.md".format(TESTS_UPLOADS_DIRECTORY))
+
+def test_app_upload_simple() -> None:
+    os.system(
+        "poetry run python src/client/main.py upload {}/md.md --dest md-renamed.md".format(TESTS_UPLOADS_DIRECTORY)
+    )
 
     assert filecmp.cmp(TESTS_UPLOADS_DIRECTORY + "/md.md", APP_STORAGE_DIRECTORY + "/public/md-renamed.md")
 
 
-def test_app_upload_simple_dest():
-    os.system("poetry run python src/client/main.py upload {}/md.md --dest dir/md-renamed.md".format(TESTS_UPLOADS_DIRECTORY))
+def test_app_upload_simple_dest() -> None:
+    os.system(
+        "poetry run python src/client/main.py upload {}/md.md --dest dir/md-renamed.md".format(TESTS_UPLOADS_DIRECTORY)
+    )
 
     assert filecmp.cmp(TESTS_UPLOADS_DIRECTORY + "/md.md", APP_STORAGE_DIRECTORY + "/public/dir/md-renamed.md")
 
 
-def test_app_upload_block():
+def test_app_upload_block() -> None:
     os.system("poetry run python src/client/main.py upload {}/block.txt".format(TESTS_UPLOADS_DIRECTORY))
 
     assert filecmp.cmp(TESTS_UPLOADS_DIRECTORY + "/block.txt", APP_STORAGE_DIRECTORY + "/public/block.txt")
 
 
-def test_app_upload_binary_files():
+def test_app_upload_binary_files() -> None:
     files = ["document.pdf", "image.png", "image.tif", "md.md"]
     for fileName in files:
-        os.system("poetry run python src/client/main.py upload {}/{} --dest {}".format(TESTS_UPLOADS_DIRECTORY, fileName, fileName))
+        os.system(
+            "poetry run python src/client/main.py upload {}/{} --dest {}".format(
+                TESTS_UPLOADS_DIRECTORY, fileName, fileName
+            )
+        )
         time.sleep(1)
-        assert filecmp.cmp(TESTS_UPLOADS_DIRECTORY + "/{}".format(fileName), APP_STORAGE_DIRECTORY + "/public/{}".format(fileName))
+        assert filecmp.cmp(
+            TESTS_UPLOADS_DIRECTORY + "/{}".format(fileName), APP_STORAGE_DIRECTORY + "/public/{}".format(fileName)
+        )
 
 
-#@pytest.mark.skip()
-def test_app_upload_big_binary_files():
+def test_app_upload_big_binary_files() -> None:
     files = ["audio.mp3", "video.avi"]
     for fileName in files:
-        os.system("poetry run python src/client/main.py upload {}/{} --dest {}".format(TESTS_UPLOADS_DIRECTORY, fileName, fileName))
+        os.system(
+            "poetry run python src/client/main.py upload {}/{} --dest {}".format(
+                TESTS_UPLOADS_DIRECTORY, fileName, fileName
+            )
+        )
         time.sleep(1)
-        assert filecmp.cmp(TESTS_UPLOADS_DIRECTORY + "/{}".format(fileName), APP_STORAGE_DIRECTORY + "/public/{}".format(fileName))
+        assert filecmp.cmp(
+            TESTS_UPLOADS_DIRECTORY + "/{}".format(fileName), APP_STORAGE_DIRECTORY + "/public/{}".format(fileName)
+        )
