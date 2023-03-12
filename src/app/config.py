@@ -17,8 +17,8 @@ class AppConfig(Config):
     STORAGE_PRIVATE = "/private"
     STORAGE_DATA = "/data.json"
 
-    SINGLE_SEGMENT_SIZE_MIN = 60000  # [byte] (not more then 60000)
-    SINGLE_SEGMENT_SIZE_MAX = 60000  # [byte] (not more then 60000)
+    SINGLE_SEGMENT_SIZE_MIN = 1500  # [byte] (not more then 60000)
+    SINGLE_SEGMENT_SIZE_MAX = 1500  # [byte] (not more then 60000)
 
 
 config = AppConfig()

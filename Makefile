@@ -143,6 +143,14 @@ test-client-upload-user-multi:
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent upload uploads/other/100.txt --dest a/c/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent upload uploads/other/100.txt --dest b/c/100.txt
 
+test-client-upload-final:
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/A.md
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/block.txt
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/block.txt --dest "ceptain america/block.txt"
+	PYTHONPATH=. poetry run python src/client/main.py upload uploads/dir
+	PYTHONPATH=. poetry run python src/client/main.py --user superman --password "clark kent" upload uploads/block.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user superman --password "clark kent" upload uploads/dir
+
 test-client-download: temp
 	PYTHONPATH=. poetry run python src/client/main.py download A.md ./temp/A.md
 
@@ -200,6 +208,14 @@ test-client-download-user-multi: temp
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download a/c/100.txt ./temp/a/c/100.txt
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent download b/c/100.txt ./temp/b/c/100.txt
 
+test-client-download-final: temp
+	PYTHONPATH=. poetry run python src/client/main.py download A.md ./temp/A.md
+	PYTHONPATH=. poetry run python src/client/main.py download block.txt ./temp/block.txt
+	PYTHONPATH=. poetry run python src/client/main.py download "ceptain america/block.txt" "./temp/ceptain america block.txt"
+	PYTHONPATH=. poetry run python src/client/main.py download dir ./temp/dir
+	PYTHONPATH=. poetry run python src/client/main.py --user superman --password "clark kent" download block.txt ./temp/user-block.txt
+	PYTHONPATH=. poetry run python src/client/main.py --user superman --password "clark kent" download dir ./temp/user-dir
+
 test-client-list:
 	PYTHONPATH=. poetry run python src/client/main.py list
 
@@ -239,6 +255,13 @@ test-client-list-user-multi:
 test-client-list-user-recursive:
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent list --recursive
 	PYTHONPATH=. poetry run python src/client/main.py --user bar list --recursive
+
+test-client-list-final:
+	PYTHONPATH=. poetry run python src/client/main.py list
+	PYTHONPATH=. poetry run python src/client/main.py list --recursive
+	PYTHONPATH=. poetry run python src/client/main.py list dir
+	PYTHONPATH=. poetry run python src/client/main.py --user superman --password "clark kent" list
+	PYTHONPATH=. poetry run python src/client/main.py --user superman --password "clark kent" list --recursive
 
 test-client-delete:
 	PYTHONPATH=. poetry run python src/client/main.py delete A.md
@@ -291,6 +314,12 @@ test-client-delete-root:
 	PYTHONPATH=. poetry run python src/client/main.py delete .
 	PYTHONPATH=. poetry run python src/client/main.py --user bar delete .
 	PYTHONPATH=. poetry run python src/client/main.py --user clark --password kent delete .
+
+test-client-delete-final:
+	PYTHONPATH=. poetry run python src/client/main.py delete block.txt
+	PYTHONPATH=. poetry run python src/client/main.py delete dir
+	PYTHONPATH=. poetry run python src/client/main.py delete .
+	PYTHONPATH=. poetry run python src/client/main.py --user superman --password "clark kent" delete .
 
 test-client-not-found: test-client-upload-not-found test-client-download-not-found test-client-list-not-found test-client-delete-not-found
 
