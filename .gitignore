@@ -7,3 +7,5 @@ poetry.lock
 storage
 temp
 profiles
+
+tests-files/downloads

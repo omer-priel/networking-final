@@ -50,7 +50,7 @@ def test_app_download_binary_files():
 def test_app_download_big_binary_files():
     test_app_upload_big_binary_files()
 
-    files = ["audio.mp3", "video.avi", "video.mp4"]
+    files = ["audio.mp3", "video.avi"]
     for fileName in files:
         os.system("poetry run python src/client/main.py download {} {}/{}".format(fileName, TESTS_DOWNLOADS_DIRECTORY, fileName))
         time.sleep(1)

@@ -10,7 +10,7 @@ clean:
 	find . -name '*.pyo' -exec sudo rm -f {} +
 	find . -name '*~' -exec sudo rm -f {} +
 	find . -name '__pycache__' -exec sudo rm -fr {} +
-	sudo rm -rf temp storage
+	sudo rm -rf temp storage tests-files/downloads
 
 clean-all: clean
 	rm -rf .venv poetry.lock

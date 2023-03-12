@@ -17,9 +17,9 @@ Options:
 --user <user name>    - set user name
 --password <password> - set user password, require --user
 --host <host> - set the server host address, defualt: localhost
---port <port> - set the server port, defualt: 8000
+--port <port> - set the server port, defualt: 30034
 --client-host <host> - set the client host address, defualt: localhost
---client-port <port> - set the client port, defualt: 8001
+--client-port <port> - set the client port, defualt: 20985
 ```
 
 * TCP Mode: \

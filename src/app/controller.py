@@ -168,6 +168,8 @@ def main_loop() -> None:
 
                             send_close(handler.get_client_address())
 
+                            logging.info("downloading {} type \"{}\"".format(handler.requestID, str(handler.request.basicLayer.pocketSubType.name)))
+
                             handlersLock.acquire()
                             handlers.pop(handler.get_requestID())
                             handlersLock.release()
